@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Türk Teknik Su Arıtma | Müşteri Takip</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#0B2E35;
+    --petrol:#0E4652;
+    --petrol-dark:#0A363F;
+    --aqua:#2F9DAE;
+    --aqua-bright:#57C2D6;
+    --aqua-soft:#E1F3F4;
+    --bg:#F1F7F8;
+    --card:#FFFFFF;
+    --slate:#5C7075;
+    --slate-light:#8DA0A4;
+    --coral:#E4674A;
+    --coral-soft:#FCE7E1;
+    --amber:#CE9526;
+    --amber-soft:#FBF1DA;
+    --green:#3C9468;
+    --green-soft:#DFF1E7;
+    --line:#E4EDEE;
+    --radius:18px;
+    --shadow: 0 4px 16px rgba(14,70,82,0.07), 0 1px 3px rgba(14,70,82,0.05);
+    --shadow-lift: 0 10px 30px rgba(14,70,82,0.14);
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--ink);
+    font-family:'Inter',sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  h1,h2,h3,.display{ font-family:'Space Grotesk',sans-serif; }
+  .app{ max-width:920px; margin:0 auto; padding:20px 16px 90px; }
+
+  header.top{ display:flex; align-items:center; gap:14px; padding:6px 2px 0; }
+  .logo-badge{
+    width:46px; height:46px; flex-shrink:0; border-radius:14px;
+    background:linear-gradient(155deg, var(--petrol) 0%, var(--petrol-dark) 100%);
+    display:flex; align-items:center; justify-content:center;
+    box-shadow:0 6px 14px rgba(10,54,63,0.28);
+  }
+  .logo-badge svg{ width:26px; height:26px; }
+  .brand-block{ min-width:0; }
+  .brand-name{
+    font-family:'Space Grotesk',sans-serif; font-size:19px; font-weight:700;
+    margin:0; letter-spacing:-0.01em; color:var(--petrol-dark); white-space:nowrap;
+  }
+  .brand-name .accent{ color:var(--aqua); }
+  header.top p{ margin:2px 0 0; font-size:12px; color:var(--slate); letter-spacing:.01em; }
+
+  .wave-divider{ width:100%; height:14px; margin:14px 0 18px; display:block; opacity:.9; }
+  .wave-divider path{ stroke:var(--aqua); stroke-width:2; fill:none; }
+
+  .tabs{
+    display:flex; gap:4px; background:#E4EEEF; border-radius:14px; padding:4px;
+    margin-bottom:20px; position:sticky; top:12px; z-index:20;
+  }
+  .tab-btn{
+    flex:1; border:none; background:transparent; padding:11px 10px; border-radius:11px;
+    font-family:'Inter',sans-serif; font-size:13.5px; font-weight:700; color:var(--slate);
+    cursor:pointer; transition:all .18s;
+  }
+  .tab-btn.active{ background:var(--card); color:var(--petrol-dark); box-shadow:var(--shadow); }
+
+  .view{ display:none; animation: fadein .2s ease; }
+  .view.active{ display:block; }
+  @keyframes fadein{ from{opacity:0; transform:translateY(4px);} to{opacity:1; transform:translateY(0);} }
+
+  .card{
+    background:var(--card); border-radius:var(--radius); box-shadow:var(--shadow);
+    border:1px solid var(--line); padding:22px;
+  }
+  .card h2{ font-size:15px; margin:0 0 18px; color:var(--petrol-dark); display:flex; align-items:center; gap:8px; }
+
+  label{ display:block; font-size:12px; font-weight:700; color:var(--slate); margin:14px 0 6px; text-transform:uppercase; letter-spacing:.02em; }
+  label:first-of-type{ margin-top:0; }
+  input[type=text], input[type=tel], input[type=date], textarea{
+    width:100%; border:1.5px solid var(--line); border-radius:11px;
+    padding:11px 13px; font-size:14.5px; font-family:inherit; color:var(--ink);
+    background:#FBFDFD; transition:border-color .15s, box-shadow .15s;
+  }
+  #f-name, #f-address, #f-work{ text-transform:uppercase; }
+  input:focus, textarea:focus{ outline:none; border-color:var(--aqua); box-shadow:0 0 0 3px var(--aqua-soft); background:#fff; }
+  textarea{ resize:vertical; min-height:46px; }
+
+  .two-col{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  @media (max-width:520px){ .two-col{ grid-template-columns:1fr; } }
+
+  .period-toggle{ display:flex; gap:8px; margin-top:6px; }
+  .period-btn{
+    flex:1; border:1.5px solid var(--line); background:#FBFDFD; border-radius:11px;
+    padding:11px 8px; font-family:inherit; font-size:13.5px; font-weight:700; color:var(--slate);
+    cursor:pointer; transition:all .15s;
+  }
+  .period-btn.active{ border-color:var(--aqua); background:var(--aqua-soft); color:var(--petrol-dark); }
+
+  .next-date-preview{
+    margin-top:12px; font-size:12.5px; color:var(--slate);
+    background:var(--bg); border-radius:10px; padding:10px 12px; border:1px dashed var(--line);
+  }
+  .next-date-preview b{ color:var(--petrol-dark); }
+
+  .submit-btn{
+    width:100%; margin-top:20px; background:var(--petrol); color:#fff; border:none;
+    border-radius:12px; padding:14px; font-family:inherit; font-size:14.5px; font-weight:700;
+    cursor:pointer; transition:background .15s, transform .1s;
+  }
+  .submit-btn:hover{ background:var(--petrol-dark); }
+  .submit-btn:active{ transform:scale(0.99); }
+
+  .hint-banner{
+    font-size:12px; color:var(--aqua); background:var(--aqua-soft); border-radius:10px;
+    padding:8px 12px; margin-top:12px; display:none;
+  }
+  .hint-banner.show{ display:block; }
+
+  .list-header{ display:flex; align-items:center; gap:10px; margin-bottom:14px; flex-wrap:wrap; }
+  #listArea{ max-height:60vh; overflow-y:auto; }
+  .list-header h2{ margin:0; margin-right:auto; }
+  .search-box{
+    flex:1; min-width:150px; max-width:260px; border:1.5px solid var(--line); border-radius:11px;
+    padding:9px 13px; font-family:inherit; font-size:13.5px; background:#FBFDFD;
+  }
+  .search-box:focus{ outline:none; border-color:var(--aqua); }
+
+  .filter-chips{ display:flex; gap:6px; flex-wrap:wrap; margin-bottom:16px; }
+  .chip{
+    border:1.5px solid var(--line); background:#fff; border-radius:999px; padding:6px 13px;
+    font-size:12px; font-weight:700; color:var(--slate); cursor:pointer; transition:all .15s;
+  }
+  .chip.active{ border-color:var(--petrol); background:var(--petrol); color:#fff; }
+
+  .table-scroll{
+    overflow-x:auto;
+    -webkit-overflow-scrolling:touch;
+    border:1px solid var(--line);
+    border-radius:14px;
+  }
+  table.cust-table{
+    width:100%;
+    min-width:680px;
+    border-collapse:collapse;
+    font-size:13.5px;
+  }
+  table.cust-table thead th{
+    text-align:left;
+    font-size:11px;
+    text-transform:uppercase;
+    letter-spacing:.03em;
+    font-weight:700;
+    color:var(--slate);
+    background:#F5FAFA;
+    padding:12px 14px;
+    border-bottom:1px solid var(--line);
+    white-space:nowrap;
+    position:sticky;
+    top:0;
+    z-index:1;
+  }
+  table.cust-table tbody tr{
+    cursor:pointer;
+    transition:background .12s;
+    border-bottom:1px solid var(--line);
+  }
+  table.cust-table tbody tr:last-child{ border-bottom:none; }
+  table.cust-table tbody tr:hover{ background:var(--aqua-soft); }
+  table.cust-table td{
+    padding:13px 14px;
+    color:var(--ink);
+    vertical-align:middle;
+  }
+  table.cust-table td.col-name{ font-weight:700; white-space:nowrap; }
+  table.cust-table td.col-address{ color:var(--slate); max-width:220px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  table.cust-table td.col-phone{ color:var(--slate); white-space:nowrap; }
+  table.cust-table td.col-date{ color:var(--slate); white-space:nowrap; }
+  table.cust-table td.col-date.date-warning{ color:var(--coral); font-weight:600; }
+  table.cust-table td.col-status{ white-space:nowrap; }
+  table.cust-table td.col-gauge{ width:34px; }
+  table.cust-table td.col-chevron{ width:20px; color:var(--slate-light); text-align:right; }
+  .row-dot{ width:10px; height:10px; border-radius:50%; display:inline-block; }
+  .row-dot.overdue{ background:var(--coral); }
+  .row-dot.soon{ background:var(--amber); }
+  .row-dot.ok{ background:var(--aqua); }
+
+  .empty-state{ text-align:center; padding:54px 20px; color:var(--slate); }
+  .empty-state .drop{ width:56px; height:56px; margin:0 auto 14px; opacity:0.5; }
+  .empty-state p{ font-size:14px; margin:4px 0 0; }
+  .empty-state b{ color:var(--petrol-dark); font-size:15px; }
+
+  .status-badge{ display:inline-block; font-size:10.5px; font-weight:700; padding:3px 9px; border-radius:999px; }
+  .status-overdue{ background:var(--coral-soft); color:#B04226; }
+  .status-soon{ background:var(--amber-soft); color:#876212; }
+  .status-ok{ background:var(--green-soft); color:#256A44; }
+
+  .detail-header{ display:flex; align-items:flex-start; gap:14px; margin-bottom:6px; }
+  .back-btn{
+    display:inline-flex; align-items:center; gap:6px; border:none; background:none;
+    color:var(--petrol); font-family:inherit; font-size:13.5px; font-weight:700; cursor:pointer;
+    padding:0 0 16px; margin:0;
+  }
+  .detail-card{ display:flex; align-items:center; gap:16px; padding:18px; margin-bottom:18px; }
+  .detail-gauge{ width:60px; height:60px; flex-shrink:0; }
+  .detail-name{ font-size:17px; font-weight:700; margin:0 0 4px; color:var(--ink); }
+  .detail-meta{ font-size:13px; color:var(--slate); line-height:1.6; }
+  .detail-actions{ margin-left:auto; display:flex; gap:6px; }
+
+  .section-title{ font-size:13px; font-weight:700; color:var(--slate); text-transform:uppercase; letter-spacing:.03em; margin:22px 0 12px 2px; }
+
+  .record-list{ display:flex; flex-direction:column; gap:10px; }
+  .record-item{
+    display:flex; gap:12px; align-items:flex-start; padding:14px 16px;
+    border:1px solid var(--line); border-radius:14px; background:#fff; position:relative;
+  }
+  .record-dot{ width:10px; height:10px; border-radius:50%; margin-top:5px; flex-shrink:0; }
+  .record-dot.overdue{ background:var(--coral); }
+  .record-dot.soon{ background:var(--amber); }
+  .record-dot.ok{ background:var(--aqua); }
+  .record-body{ flex:1; }
+  .record-work{ font-weight:700; font-size:14px; color:var(--ink); margin:0 0 3px; }
+  .record-dates{ font-size:12.5px; color:var(--slate); }
+  .record-item .icon-btn{ margin-left:auto; }
+
+  .icon-btn{
+    width:32px; height:32px; border-radius:9px; border:1.5px solid var(--line); background:#fff;
+    cursor:pointer; display:flex; align-items:center; justify-content:center; color:var(--slate);
+    transition:all .15s; flex-shrink:0;
+  }
+  .icon-btn:hover{ border-color:var(--aqua); color:var(--petrol-dark); }
+  .icon-btn.danger:hover{ border-color:var(--coral); color:var(--coral); }
+
+  .toast{
+    position:fixed; bottom:22px; left:50%; transform:translateX(-50%) translateY(20px);
+    background:var(--petrol-dark); color:#fff; padding:11px 22px; border-radius:11px;
+    font-size:13.5px; font-weight:600; opacity:0; transition:all .25s;
+    pointer-events:none; box-shadow:0 8px 24px rgba(10,54,63,0.3); z-index:50;
+  }
+  .toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+
+  ::selection{ background:var(--aqua-soft); }
+  .loading-state{ text-align:center; padding:40px; color:var(--slate); font-size:13.5px; }
+
+  @media (prefers-reduced-motion: reduce){ *{ transition:none !important; animation:none !important; } }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header class="top">
+    <div class="logo-badge">
+      <svg viewBox="0 0 48 48" fill="none">
+        <path d="M24 4C24 4 10 22 10 32C10 39.7 16.3 46 24 46C31.7 46 38 39.7 38 32C38 22 24 4 24 4Z" fill="#57C2D6" opacity="0.35"/>
+        <path d="M24 12C24 12 15 25 15 32.5C15 38 19 42 24 42C29 42 33 38 33 32.5C33 25 24 12 24 12Z" fill="#ffffff"/>
+      </svg>
+    </div>
+    <div class="brand-block">
+      <p class="brand-name">Türk Teknik <span class="accent">Su Arıtma</span></p>
+      <p>Bakım ve filtre değişim kayıtları</p>
+    </div>
+  </header>
+
+  <svg class="wave-divider" viewBox="0 0 400 14" preserveAspectRatio="none">
+    <path d="M0 7 Q 12.5 1, 25 7 T 50 7 T 75 7 T 100 7 T 125 7 T 150 7 T 175 7 T 200 7 T 225 7 T 250 7 T 275 7 T 300 7 T 325 7 T 350 7 T 375 7 T 400 7"/>
+  </svg>
+
+  <div class="tabs">
+    <button class="tab-btn active" data-tab="form">＋ Yeni Kayıt</button>
+    <button class="tab-btn" data-tab="list">Müşteriler</button>
+  </div>
+
+  <!-- FORM VIEW -->
+  <div class="view active" id="view-form">
+    <div class="card">
+      <h2>Yeni İşlem Kaydı</h2>
+      <form id="custForm" novalidate>
+        <label>Ad Soyad</label>
+        <input type="text" id="f-name" placeholder="Örn. Ahmet Yılmaz">
+
+        <label>Adres</label>
+        <textarea id="f-address" placeholder="Mahalle, sokak, ilçe..."></textarea>
+
+        <label>Telefon</label>
+        <input type="tel" id="f-phone" placeholder="05xx xxx xx xx">
+        <div class="hint-banner" id="existingHint">Bu isimle kayıtlı bir müşteri var — yeni işlem, o müşterinin geçmişine eklenecek.</div>
+
+        <div class="two-col">
+          <div>
+            <label>Yapılan İş</label>
+            <input type="text" id="f-work" placeholder="Örn. Filtre değişimi">
+          </div>
+          <div>
+            <label>İşlem Tarihi</label>
+            <input type="date" id="f-date">
+          </div>
+        </div>
+
+        <label>Sonraki Değişim</label>
+        <div class="period-toggle">
+          <button type="button" class="period-btn active" data-months="6">6 Ay</button>
+          <button type="button" class="period-btn" data-months="12">1 Yıl</button>
+        </div>
+
+        <div class="next-date-preview">Sonraki hatırlatma: <b id="nextDateText">—</b></div>
+
+        <button type="submit" class="submit-btn">Kaydet</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- LIST VIEW -->
+  <div class="view" id="view-list">
+    <div class="card">
+      <div class="list-header">
+        <h2>Müşteriler</h2>
+        <input type="text" class="search-box" id="searchBox" placeholder="Ad, telefon veya adres ara...">
+      </div>
+      <div class="filter-chips" id="filterChips">
+        <div class="chip active" data-filter="all">Tümü</div>
+        <div class="chip" data-filter="overdue">Gecikmiş</div>
+        <div class="chip" data-filter="soon">Yaklaşan</div>
+        <div class="chip" data-filter="ok">Zamanında</div>
+      </div>
+      <div id="listArea"><div class="loading-state">Kayıtlar yükleniyor...</div></div>
+    </div>
+  </div>
+
+  <!-- DETAIL VIEW -->
+  <div class="view" id="view-detail">
+    <button class="back-btn" id="backBtn">← Müşterilere dön</button>
+    <div class="card detail-card">
+      <div class="detail-gauge" id="detailGauge"></div>
+      <div>
+        <p class="detail-name" id="detailName">—</p>
+        <div class="detail-meta" id="detailMeta"></div>
+      </div>
+      <div class="detail-actions">
+        <button class="icon-btn danger" id="deleteCustBtn" title="Müşteriyi sil">✕</button>
+      </div>
+    </div>
+
+    <div class="section-title">İşlem Geçmişi</div>
+    <div class="record-list" id="recordList"></div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+let customers = [];
+let selectedMonths = 6;
+let currentFilter = 'all';
+let searchTerm = '';
+let activeCustomerId = null;
+
+const form = document.getElementById('custForm');
+const dateInput = document.getElementById('f-date');
+const nextDateText = document.getElementById('nextDateText');
+const listArea = document.getElementById('listArea');
+const toast = document.getElementById('toast');
+const phoneInput = document.getElementById('f-phone');
+const nameInput = document.getElementById('f-name');
+const existingHint = document.getElementById('existingHint');
+
+dateInput.value = new Date().toISOString().slice(0,10);
+
+function switchTab(tab){
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.toggle('active', b.dataset.tab===tab));
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.getElementById('view-'+tab).classList.add('active');
+  if(tab==='list') render();
+}
+document.querySelectorAll('.tab-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=> switchTab(btn.dataset.tab));
+});
+document.getElementById('backBtn').addEventListener('click', ()=> switchTab('list'));
+
+function showToast(msg){
+  toast.textContent = msg;
+  toast.classList.add('show');
+  setTimeout(()=> toast.classList.remove('show'), 2200);
+}
+function fmtDate(iso){
+  const d = new Date(iso + 'T00:00:00');
+  return d.toLocaleDateString('tr-TR', {day:'2-digit', month:'long', year:'numeric'});
+}
+function addMonths(iso, months){
+  const d = new Date(iso + 'T00:00:00');
+  d.setMonth(d.getMonth() + months);
+  return d.toISOString().slice(0,10);
+}
+function normalizeName(n){ return n.trim().toLowerCase().replace(/\s+/g,' '); }
+function normalizePhone(p){ return p.replace(/\D/g,''); }
+function escapeHtml(str){
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+function statusOf(nextDate){
+  const today = new Date(); today.setHours(0,0,0,0);
+  const next = new Date(nextDate + 'T00:00:00');
+  const diffDays = Math.round((next - today) / 86400000);
+  if(diffDays < 0) return {key:'overdue', label:'Gecikmiş', days:diffDays};
+  if(diffDays <= 30) return {key:'soon', label:'Yaklaşıyor', days:diffDays};
+  return {key:'ok', label:'Zamanında', days:diffDays};
+}
+function latestRecord(customer){
+  return [...customer.records].sort((a,b)=> new Date(b.date) - new Date(a.date))[0];
+}
+
+document.querySelectorAll('.period-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('.period-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    selectedMonths = parseInt(btn.dataset.months, 10);
+    updatePreview();
+  });
+});
+function updatePreview(){
+  const base = dateInput.value || new Date().toISOString().slice(0,10);
+  nextDateText.textContent = fmtDate(addMonths(base, selectedMonths));
+}
+dateInput.addEventListener('change', updatePreview);
+updatePreview();
+
+nameInput.addEventListener('input', ()=>{
+  const norm = normalizeName(nameInput.value);
+  const match = norm.length >= 2 ? customers.find(c => normalizeName(c.name) === norm) : null;
+  existingHint.classList.toggle('show', !!match);
+  if(match){
+    document.getElementById('f-address').value = match.address;
+    phoneInput.value = match.phone;
+  }
+});
+
+form.addEventListener('submit', async (e)=>{
+  e.preventDefault();
+  const name = document.getElementById('f-name').value.trim().toLocaleUpperCase('tr-TR');
+  const address = document.getElementById('f-address').value.trim().toLocaleUpperCase('tr-TR');
+  const phone = phoneInput.value.trim();
+  const work = document.getElementById('f-work').value.trim().toLocaleUpperCase('tr-TR');
+  const date = dateInput.value;
+
+  if(!name){ showToast('Lütfen ad soyad girin'); return; }
+  if(!address){ showToast('Lütfen adres girin'); return; }
+  if(!phone){ showToast('Lütfen telefon girin'); return; }
+  if(!work){ showToast('Lütfen yapılan işi girin'); return; }
+  if(!date){ showToast('Lütfen işlem tarihi seçin'); return; }
+
+  const nextDate = addMonths(date, selectedMonths);
+  const normName = normalizeName(name);
+
+  const record = {
+    id: Date.now().toString(36) + Math.random().toString(36).slice(2,6),
+    date, work, nextDate, periodMonths: selectedMonths
+  };
+
+  const submitBtn = form.querySelector('.submit-btn');
+  submitBtn.disabled = true;
+
+  try{
+    let existing = customers.find(c => normalizeName(c.name) === normName);
+    if(existing){
+      const res = await fetch(`/api/customers/${existing.id}/records`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ name, address, phone, record })
+      });
+      if(!res.ok) throw new Error('add-record failed');
+      const updated = await res.json();
+      Object.assign(existing, updated);
+      showToast('İşlem, mevcut müşteriye eklendi');
+    }else{
+      const newCustomer = {
+        id: Date.now().toString(36) + Math.random().toString(36).slice(2,6),
+        name, address, phone, records:[record]
+      };
+      const res = await fetch('/api/customers', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(newCustomer)
+      });
+      if(!res.ok) throw new Error('create failed');
+      const created = await res.json();
+      customers.push(created);
+      showToast('Yeni müşteri kaydedildi');
+    }
+  }catch(err){
+    console.error('Kaydetme hatası', err);
+    showToast('Kaydetme hatası — sunucuya ulaşılamadı');
+    submitBtn.disabled = false;
+    return;
+  }
+
+  submitBtn.disabled = false;
+  render();
+  form.reset();
+  dateInput.value = new Date().toISOString().slice(0,10);
+  selectedMonths = 6;
+  document.querySelectorAll('.period-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelector('.period-btn[data-months="6"]').classList.add('active');
+  existingHint.classList.remove('show');
+  updatePreview();
+});
+
+function gaugeSVG(pct, statusKey){
+  const colors = { overdue:'#E4674A', soon:'#CE9526', ok:'#3FA9B8' };
+  const fillColor = colors[statusKey] || '#3FA9B8';
+  const clamped = Math.max(0, Math.min(1, pct));
+  const fillY = 8 + (1 - clamped) * 32;
+  const clipId = 'clip-' + Math.random().toString(36).slice(2,9);
+  return `
+  <svg viewBox="0 0 48 48" width="100%" height="100%">
+    <defs><clipPath id="${clipId}">
+      <path d="M24 6C24 6 11 23 11 32.5C11 39.4 16.9 45 24 45C31.1 45 37 39.4 37 32.5C37 23 24 6 24 6Z"/>
+    </clipPath></defs>
+    <path d="M24 6C24 6 11 23 11 32.5C11 39.4 16.9 45 24 45C31.1 45 37 39.4 37 32.5C37 23 24 6 24 6Z"
+      fill="#EDF6F7" stroke="#DCEAEA" stroke-width="1.5"/>
+    <rect x="9" y="${fillY}" width="30" height="40" fill="${fillColor}" opacity="0.85" clip-path="url(#${clipId})"/>
+    <path d="M24 6C24 6 11 23 11 32.5C11 39.4 16.9 45 24 45C31.1 45 37 39.4 37 32.5C37 23 24 6 24 6Z"
+      fill="none" stroke="${fillColor}" stroke-width="1.5" opacity="0.4"/>
+  </svg>`;
+}
+
+function render(){
+  if(customers.length === 0){
+    listArea.innerHTML = `
+      <div class="empty-state">
+        <div class="drop">${gaugeSVG(0,'ok')}</div>
+        <p><b>Henüz kayıt yok</b><br>"Yeni Kayıt" sekmesinden ilk müşterinizi ekleyin.</p>
+      </div>`;
+    return;
+  }
+
+  let items = customers.map(c => {
+    const last = latestRecord(c);
+    return {...c, last, status: statusOf(last.nextDate)};
+  });
+
+  if(searchTerm){
+    items = items.filter(c =>
+      c.name.toLowerCase().includes(searchTerm) ||
+      c.phone.toLowerCase().includes(searchTerm) ||
+      c.address.toLowerCase().includes(searchTerm)
+    );
+  }
+  if(currentFilter !== 'all'){
+    items = items.filter(c => c.status.key === currentFilter);
+  }
+
+  const order = {overdue:0, soon:1, ok:2};
+  items.sort((a,b)=>{
+    if(order[a.status.key] !== order[b.status.key]) return order[a.status.key]-order[b.status.key];
+    return new Date(a.last.nextDate) - new Date(b.last.nextDate);
+  });
+
+  if(items.length === 0){
+    listArea.innerHTML = `<div class="empty-state"><p>Aramanızla eşleşen kayıt bulunamadı.</p></div>`;
+    return;
+  }
+
+  listArea.innerHTML = `
+    <div class="table-scroll">
+    <table class="cust-table">
+      <thead>
+        <tr>
+          <th></th>
+          <th>Ad Soyad</th>
+          <th>Adres</th>
+          <th>Telefon</th>
+          <th>Son İşlem</th>
+          <th>Durum</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+      ${items.map(c=>{
+        const statusClass = 'status-' + c.status.key;
+        const statusText = c.status.key === 'overdue' ? `${Math.abs(c.status.days)} gün gecikti` : `${c.status.days} gün kaldı`;
+        return `
+        <tr onclick="openDetail('${c.id}')">
+          <td class="col-gauge"><span class="row-dot ${c.status.key}"></span></td>
+          <td class="col-name">${escapeHtml(c.name)}</td>
+          <td class="col-address">${escapeHtml(c.address)}</td>
+          <td class="col-phone">${escapeHtml(c.phone)}</td>
+          <td class="col-date${(c.status.key==='soon'||c.status.key==='overdue') ? ' date-warning' : ''}">${fmtDate(c.last.date)}</td>
+          <td class="col-status"><span class="status-badge ${statusClass}">${c.status.label} · ${statusText}</span></td>
+          <td class="col-chevron">›</td>
+        </tr>`;
+      }).join('')}
+      </tbody>
+    </table>
+    </div>`;
+}
+
+document.querySelectorAll('.chip').forEach(chip=>{
+  chip.addEventListener('click', ()=>{
+    document.querySelectorAll('.chip').forEach(c=>c.classList.remove('active'));
+    chip.classList.add('active');
+    currentFilter = chip.dataset.filter;
+    render();
+  });
+});
+document.getElementById('searchBox').addEventListener('input', (e)=>{
+  searchTerm = e.target.value.trim().toLowerCase();
+  render();
+});
+
+function openDetail(id){
+  activeCustomerId = id;
+  renderDetail();
+  switchTab('detail');
+}
+function renderDetail(){
+  const c = customers.find(x => x.id === activeCustomerId);
+  if(!c) return;
+  const last = latestRecord(c);
+  const status = statusOf(last.nextDate);
+  const totalDays = Math.max(1, Math.round((new Date(last.nextDate) - new Date(last.date)) / 86400000));
+  const elapsed = Math.round((new Date() - new Date(last.date)) / 86400000);
+  const pct = elapsed / totalDays;
+
+  document.getElementById('detailGauge').innerHTML = gaugeSVG(pct, status.key);
+  document.getElementById('detailName').textContent = c.name;
+  document.getElementById('detailMeta').innerHTML = `📍 ${escapeHtml(c.address)}<br>📞 ${escapeHtml(c.phone)}`;
+
+  const records = [...c.records].sort((a,b)=> new Date(b.date) - new Date(a.date));
+  document.getElementById('recordList').innerHTML = records.map(r=>{
+    const st = statusOf(r.nextDate);
+    const periodLabel = r.periodMonths === 12 ? '1 yıl' : '6 ay';
+    return `
+    <div class="record-item">
+      <div class="record-dot ${st.key}"></div>
+      <div class="record-body">
+        <p class="record-work">${escapeHtml(r.work)}</p>
+        <div class="record-dates">${fmtDate(r.date)} yapıldı · ${periodLabel} sonra (<span${(st.key==='soon'||st.key==='overdue') ? ' style="color:var(--coral);font-weight:600;"' : ''}>${fmtDate(r.nextDate)}</span>) hatırlat</div>
+      </div>
+      <button class="icon-btn danger" title="Kaydı sil" onclick="deleteRecord('${c.id}','${r.id}')">✕</button>
+    </div>`;
+  }).join('');
+}
+document.getElementById('deleteCustBtn').addEventListener('click', async ()=>{
+  try{
+    const res = await fetch(`/api/customers/${activeCustomerId}`, { method:'DELETE' });
+    if(!res.ok) throw new Error('delete failed');
+    customers = customers.filter(c => c.id !== activeCustomerId);
+    showToast('Müşteri silindi');
+    switchTab('list');
+  }catch(err){
+    console.error('Silme hatası', err);
+    showToast('Silme hatası — sunucuya ulaşılamadı');
+  }
+});
+async function deleteRecord(custId, recId){
+  const c = customers.find(x => x.id === custId);
+  if(!c) return;
+  if(c.records.length <= 1){
+    showToast('Bir müşterinin en az bir işlemi olmalı');
+    return;
+  }
+  try{
+    const res = await fetch(`/api/customers/${custId}/records/${recId}`, { method:'DELETE' });
+    if(!res.ok) throw new Error('delete-record failed');
+    c.records = c.records.filter(r => r.id !== recId);
+    renderDetail();
+    showToast('İşlem kaydı silindi');
+  }catch(err){
+    console.error('Silme hatası', err);
+    showToast('Silme hatası — sunucuya ulaşılamadı');
+  }
+}
+
+async function loadCustomers(){
+  try{
+    const res = await fetch('/api/customers');
+    if(!res.ok) throw new Error('load failed');
+    customers = await res.json();
+  }catch(err){
+    console.error('Load error', err);
+    customers = [];
+    showToast('Veriler yüklenemedi — sunucuya ulaşılamadı');
+  }
+  if(document.getElementById('view-list').classList.contains('active')){
+    render();
+  }
+}
+loadCustomers();
+</script>
+</body>
+</html>

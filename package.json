@@ -1,0 +1,13 @@
+{
+  "name": "turk-teknik-su-aritma-musteri-takip",
+  "version": "1.0.0",
+  "description": "Türk Teknik Su Arıtma - Müşteri Takip uygulaması (Node.js + MongoDB Atlas)",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "mongodb": "^6.9.0",
+    "dotenv": "^16.4.5"
+  }
+}

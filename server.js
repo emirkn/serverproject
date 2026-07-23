@@ -135,6 +135,24 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
+    // PUT /api/customers/:id -> müşteri bilgilerini güncelle (kayıt eklemeden)
+    if (parts.length === 3 && parts[0] === 'api' && parts[1] === 'customers' && req.method === 'PUT') {
+      const custId = parts[2];
+      const body = await readBody(req);
+      const { name, address, phone } = JSON.parse(body);
+      const result = await customersCollection.findOneAndUpdate(
+        { id: custId },
+        { $set: { name, address, phone } },
+        { returnDocument: 'after', projection: { _id: 0 } }
+      );
+      if (!result) {
+        sendJSON(res, 404, { error: 'Müşteri bulunamadı' });
+        return;
+      }
+      sendJSON(res, 200, result);
+      return;
+    }
+
     // DELETE /api/customers/:id -> müşteriyi sil
     if (parts.length === 3 && parts[0] === 'api' && parts[1] === 'customers' && req.method === 'DELETE') {
       const custId = parts[2];

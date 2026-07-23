@@ -235,6 +235,16 @@
   }
   .icon-btn:hover{ border-color:var(--aqua); color:var(--petrol-dark); }
   .icon-btn.danger:hover{ border-color:var(--coral); color:var(--coral); }
+  .icon-btn.primary{ background:var(--petrol); border-color:var(--petrol); color:#fff; }
+  .icon-btn.primary:hover{ background:var(--petrol-dark); border-color:var(--petrol-dark); color:#fff; }
+  .detail-actions{ display:flex; gap:8px; }
+  #detailInfoEdit label{ font-size:12px; font-weight:700; color:var(--slate); margin:8px 0 4px; display:block; }
+  #detailInfoEdit input, #detailInfoEdit textarea{
+    width:100%; border:1.5px solid var(--line); border-radius:9px; padding:8px 10px;
+    font-size:13.5px; font-family:inherit; color:var(--ink); background:#FBFDFD; text-transform:uppercase;
+  }
+  #detailInfoEdit textarea{ min-height:50px; resize:vertical; }
+  .record-amount{ color:var(--petrol-dark); font-weight:700; }
 
   .toast{
     position:fixed; bottom:22px; left:50%; transform:translateX(-50%) translateY(20px);
@@ -301,6 +311,9 @@
           </div>
         </div>
 
+        <label>Ödenen Tutar (₺)</label>
+        <input type="number" id="f-amount" placeholder="Örn. 1500" min="0" step="0.01">
+
         <label>Sonraki Değişim</label>
         <div class="period-toggle">
           <button type="button" class="period-btn active" data-months="6">6 Ay</button>
@@ -336,12 +349,23 @@
     <button class="back-btn" id="backBtn">← Müşterilere dön</button>
     <div class="card detail-card">
       <div class="detail-gauge" id="detailGauge"></div>
-      <div>
+      <div id="detailInfoView">
         <p class="detail-name" id="detailName">—</p>
         <div class="detail-meta" id="detailMeta"></div>
       </div>
+      <div id="detailInfoEdit" style="display:none; flex:1;">
+        <label>Ad Soyad</label>
+        <input type="text" id="edit-name">
+        <label>Adres</label>
+        <textarea id="edit-address"></textarea>
+        <label>Telefon</label>
+        <input type="tel" id="edit-phone">
+      </div>
       <div class="detail-actions">
+        <button class="icon-btn" id="editCustBtn" title="Bilgileri düzenle">✎</button>
         <button class="icon-btn danger" id="deleteCustBtn" title="Müşteriyi sil">✕</button>
+        <button class="icon-btn primary" id="saveCustBtn" title="Kaydet" style="display:none">✓</button>
+        <button class="icon-btn" id="cancelEditBtn" title="Vazgeç" style="display:none">↺</button>
       </div>
     </div>
 
@@ -447,6 +471,7 @@ form.addEventListener('submit', async (e)=>{
   const phone = phoneInput.value.trim();
   const work = document.getElementById('f-work').value.trim().toLocaleUpperCase('tr-TR');
   const date = dateInput.value;
+  const amount = parseFloat(document.getElementById('f-amount').value) || 0;
 
   if(!name){ showToast('Lütfen ad soyad girin'); return; }
   if(!address){ showToast('Lütfen adres girin'); return; }
@@ -459,7 +484,7 @@ form.addEventListener('submit', async (e)=>{
 
   const record = {
     id: Date.now().toString(36) + Math.random().toString(36).slice(2,6),
-    date, work, nextDate, periodMonths: selectedMonths
+    date, work, nextDate, periodMonths: selectedMonths, amount
   };
 
   const submitBtn = form.querySelector('.submit-btn');
@@ -615,6 +640,7 @@ document.getElementById('searchBox').addEventListener('input', (e)=>{
 
 function openDetail(id){
   activeCustomerId = id;
+  exitEditMode();
   renderDetail();
   switchTab('detail');
 }
@@ -639,13 +665,58 @@ function renderDetail(){
     <div class="record-item">
       <div class="record-dot ${st.key}"></div>
       <div class="record-body">
-        <p class="record-work">${escapeHtml(r.work)}</p>
+        <p class="record-work">${escapeHtml(r.work)}${r.amount ? ` · <span class="record-amount">₺${Number(r.amount).toLocaleString('tr-TR')}</span>` : ''}</p>
         <div class="record-dates">${fmtDate(r.date)} yapıldı · ${periodLabel} sonra (<span${(st.key==='soon'||st.key==='overdue') ? ' style="color:var(--coral);font-weight:600;"' : ''}>${fmtDate(r.nextDate)}</span>) hatırlat</div>
       </div>
       <button class="icon-btn danger" title="Kaydı sil" onclick="deleteRecord('${c.id}','${r.id}')">✕</button>
     </div>`;
   }).join('');
 }
+document.getElementById('editCustBtn').addEventListener('click', ()=>{
+  const c = customers.find(x => x.id === activeCustomerId);
+  if(!c) return;
+  document.getElementById('edit-name').value = c.name;
+  document.getElementById('edit-address').value = c.address;
+  document.getElementById('edit-phone').value = c.phone;
+  document.getElementById('detailInfoView').style.display = 'none';
+  document.getElementById('detailInfoEdit').style.display = 'block';
+  document.getElementById('editCustBtn').style.display = 'none';
+  document.getElementById('deleteCustBtn').style.display = 'none';
+  document.getElementById('saveCustBtn').style.display = 'flex';
+  document.getElementById('cancelEditBtn').style.display = 'flex';
+});
+function exitEditMode(){
+  document.getElementById('detailInfoView').style.display = '';
+  document.getElementById('detailInfoEdit').style.display = 'none';
+  document.getElementById('editCustBtn').style.display = '';
+  document.getElementById('deleteCustBtn').style.display = '';
+  document.getElementById('saveCustBtn').style.display = 'none';
+  document.getElementById('cancelEditBtn').style.display = 'none';
+}
+document.getElementById('cancelEditBtn').addEventListener('click', exitEditMode);
+document.getElementById('saveCustBtn').addEventListener('click', async ()=>{
+  const c = customers.find(x => x.id === activeCustomerId);
+  if(!c) return;
+  const name = document.getElementById('edit-name').value.trim().toLocaleUpperCase('tr-TR');
+  const address = document.getElementById('edit-address').value.trim().toLocaleUpperCase('tr-TR');
+  const phone = document.getElementById('edit-phone').value.trim();
+  if(!name || !address || !phone){ showToast('Tüm alanları doldurun'); return; }
+  try{
+    const res = await fetch(`/api/customers/${c.id}`, {
+      method: 'PUT',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ name, address, phone })
+    });
+    if(!res.ok) throw new Error('update failed');
+    c.name = name; c.address = address; c.phone = phone;
+    exitEditMode();
+    renderDetail();
+    showToast('Müşteri bilgileri güncellendi');
+  }catch(err){
+    console.error('Güncelleme hatası', err);
+    showToast('Güncelleme hatası — sunucuya ulaşılamadı');
+  }
+});
 document.getElementById('deleteCustBtn').addEventListener('click', async ()=>{
   try{
     const res = await fetch(`/api/customers/${activeCustomerId}`, { method:'DELETE' });

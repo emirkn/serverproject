@@ -91,7 +91,7 @@
   input:focus, textarea:focus{ outline:none; border-color:var(--aqua); box-shadow:0 0 0 3px var(--aqua-soft); background:#fff; }
   textarea{ resize:vertical; min-height:46px; }
 
-  .two-col{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .two-col{ display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:18px; }
   @media (max-width:520px){ .two-col{ grid-template-columns:1fr; } }
 
   .period-toggle{ display:flex; gap:8px; margin-top:6px; }
@@ -179,8 +179,9 @@
   }
   table.cust-table td.col-name{ font-weight:700; white-space:nowrap; }
   table.cust-table td.col-address{ color:var(--slate); max-width:220px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  table.cust-table td.col-phone{ color:var(--slate); white-space:nowrap; }
+  table.cust-table td.col-phone{ color:var(--slate); white-space:normal; word-break:break-word; }
   table.cust-table td.col-date{ color:var(--slate); white-space:nowrap; }
+  table.cust-table td.col-warranty{ color:var(--slate); white-space:nowrap; }
   table.cust-table td.col-date.date-warning{ color:var(--coral); font-weight:600; }
   table.cust-table td.col-status{ white-space:nowrap; }
   table.cust-table td.col-gauge{ width:34px; }
@@ -208,7 +209,8 @@
   }
   .detail-card{ display:flex; align-items:center; gap:16px; padding:18px; margin-bottom:18px; }
   .detail-gauge{ width:60px; height:60px; flex-shrink:0; }
-  .detail-name{ font-size:17px; font-weight:700; margin:0 0 4px; color:var(--ink); }
+  .detail-name{ font-size:17px; font-weight:700; margin:0; color:var(--ink); }
+  .detail-note{ font-size:13px; color:var(--slate); line-height:1.4; padding:8px 12px; background:rgba(47,157,174,0.1); border-radius:12px; margin-left:10px; white-space:pre-wrap; }
   .detail-meta{ font-size:13px; color:var(--slate); line-height:1.6; }
   .detail-actions{ margin-left:auto; display:flex; gap:6px; }
 
@@ -239,6 +241,9 @@
   .icon-btn.primary:hover{ background:var(--petrol-dark); border-color:var(--petrol-dark); color:#fff; }
   .detail-actions{ display:flex; gap:8px; }
   #detailInfoEdit label{ font-size:12px; font-weight:700; color:var(--slate); margin:8px 0 4px; display:block; }
+  .record-note{ font-size:12px; color:var(--slate); margin-top:6px; }
+  /* preserve line breaks and wrap long notes */
+  .record-note, .cust-note{ white-space:pre-wrap; }
   #detailInfoEdit input, #detailInfoEdit textarea{
     width:100%; border:1.5px solid var(--line); border-radius:9px; padding:8px 10px;
     font-size:13.5px; font-family:inherit; color:var(--ink); background:#FBFDFD; text-transform:uppercase;
@@ -252,6 +257,20 @@
     font-size:13.5px; font-weight:600; opacity:0; transition:all .25s;
     pointer-events:none; box-shadow:0 8px 24px rgba(10,54,63,0.3); z-index:50;
   }
+  .lock-screen{
+    position:fixed; inset:0; display:flex; align-items:center; justify-content:center;
+    background:rgba(11,46,53,0.92); z-index:100; padding:18px;
+  }
+  .lock-card{
+    width:min(440px,100%); background:#fff; border-radius:22px;
+    padding:28px 24px; box-shadow:0 24px 60px rgba(0,0,0,0.18);
+  }
+  .lock-card h2{ margin:0 0 10px; font-size:22px; color:var(--petrol-dark); }
+  .lock-card p{ margin:0 0 20px; color:var(--slate); font-size:14px; line-height:1.6; }
+  .lock-card input{ width:100%; margin-bottom:14px; }
+  .lock-card button{ width:100%; background:var(--petrol); color:#fff; border:none; border-radius:12px; padding:14px; font-size:15px; font-weight:700; cursor:pointer; }
+  .lock-card button:hover{ background:var(--petrol-dark); }
+  .lock-note{ font-size:12px; color:var(--slate); margin-top:12px; }
   .toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
 
   ::selection{ background:var(--aqua-soft); }
@@ -259,8 +278,48 @@
 
   @media (prefers-reduced-motion: reduce){ *{ transition:none !important; animation:none !important; } }
 </style>
+  <style>
+    /* Improvements: checklist chips, spacing, responsive tweaks */
+    .work-row{ display:flex; gap:12px; align-items:flex-start; }
+    .work-checklist{ display:flex; flex-wrap:wrap; gap:8px; }
+    .work-checklist label{ display:inline-flex; align-items:center; gap:8px; padding:8px 12px; border-radius:999px; border:1px solid var(--line); background:#fff; cursor:pointer; font-weight:700; color:var(--slate); font-size:13px; }
+    .work-checklist input[type=checkbox]{ width:18px; height:18px; accent-color:var(--aqua); }
+    .work-checklist label.chip-active{ background:var(--aqua-soft); border-color:var(--aqua); color:var(--petrol-dark); }
+    .work-notes{ width:46%; }
+
+    /* Make period toggle wrap and touch-friendly */
+    .period-toggle{ flex-wrap:wrap; }
+    .period-btn{ padding:12px 10px; font-size:14px; }
+
+    /* Reduce paddings on small screens and stack form columns */
+    @media (max-width:720px){
+      .two-col{ grid-template-columns:1fr; }
+      .work-row{ flex-direction:column; }
+      .work-notes{ width:100%; }
+      .work-checklist label{ padding:10px; }
+      .submit-btn{ padding:12px; }
+    }
+    @media (max-width:420px){
+      header.top{ gap:10px; }
+      .brand-name{ font-size:16px; }
+      .logo-badge{ width:40px; height:40px; }
+      .tab-btn{ font-size:13px; padding:10px; }
+    }
+  </style>
 </head>
 <body>
+<div id="lockScreen" class="lock-screen">
+  <div class="lock-card">
+    <h2 id="lockTitle">Şifre ile giriş yapın</h2>
+    <p>Bu uygulamayı açmak için önce bir şifre belirleyin veya kayıtlı şifrenizi girin.</p>
+    <form id="lockForm">
+      <input type="password" id="lockPassword" placeholder="Şifre" autocomplete="new-password" required>
+      <input type="password" id="lockPasswordConfirm" placeholder="Şifreyi tekrar girin" autocomplete="new-password" required>
+      <button type="submit" id="lockSubmit">Kaydet ve Gir</button>
+      <p class="lock-note" id="lockMessage"></p>
+    </form>
+  </div>
+</div>
 <div class="app">
 
   <header class="top">
@@ -295,15 +354,127 @@
 
         <label>Adres</label>
         <textarea id="f-address" placeholder="Mahalle, sokak, ilçe..."></textarea>
+        <label>İl</label>
+        <select id="f-province" required style="width:100%; border:1.5px solid var(--line); border-radius:11px; padding:11px 13px; font-size:14.5px; background:#FBFDFD; color:var(--ink);">
+          <option value="">İl seçin...</option>
+          <option value="İstanbul">İstanbul</option>
+          <option value="Kocaeli">Kocaeli</option>
+          <option value="Ankara">Ankara</option>
+          <option value="Adana">Adana</option>
+          <option value="Adıyaman">Adıyaman</option>
+          <option value="Afyonkarahisar">Afyonkarahisar</option>
+          <option value="Ağrı">Ağrı</option>
+          <option value="Amasya">Amasya</option>
+          <option value="Antalya">Antalya</option>
+          <option value="Artvin">Artvin</option>
+          <option value="Aydın">Aydın</option>
+          <option value="Balıkesir">Balıkesir</option>
+          <option value="Bilecik">Bilecik</option>
+          <option value="Bingöl">Bingöl</option>
+          <option value="Bitlis">Bitlis</option>
+          <option value="Bolu">Bolu</option>
+          <option value="Burdur">Burdur</option>
+          <option value="Bursa">Bursa</option>
+          <option value="Çanakkale">Çanakkale</option>
+          <option value="Çankırı">Çankırı</option>
+          <option value="Çorum">Çorum</option>
+          <option value="Denizli">Denizli</option>
+          <option value="Diyarbakır">Diyarbakır</option>
+          <option value="Edirne">Edirne</option>
+          <option value="Elazığ">Elazığ</option>
+          <option value="Erzincan">Erzincan</option>
+          <option value="Erzurum">Erzurum</option>
+          <option value="Eskişehir">Eskişehir</option>
+          <option value="Gaziantep">Gaziantep</option>
+          <option value="Giresun">Giresun</option>
+          <option value="Gümüşhane">Gümüşhane</option>
+          <option value="Hakkari">Hakkari</option>
+          <option value="Hatay">Hatay</option>
+          <option value="Isparta">Isparta</option>
+          <option value="Mersin">Mersin</option>
+          <option value="İzmir">İzmir</option>
+          <option value="Kars">Kars</option>
+          <option value="Kastamonu">Kastamonu</option>
+          <option value="Kayseri">Kayseri</option>
+          <option value="Kırıkkale">Kırıkkale</option>
+          <option value="Kırklareli">Kırklareli</option>
+          <option value="Kırşehir">Kırşehir</option>
+          <option value="Kilis">Kilis</option>
+          <option value="Konya">Konya</option>
+          <option value="Kütahya">Kütahya</option>
+          <option value="Malatya">Malatya</option>
+          <option value="Manisa">Manisa</option>
+          <option value="Kahramanmaraş">Kahramanmaraş</option>
+          <option value="Mardin">Mardin</option>
+          <option value="Muğla">Muğla</option>
+          <option value="Muş">Muş</option>
+          <option value="Nevşehir">Nevşehir</option>
+          <option value="Niğde">Niğde</option>
+          <option value="Ordu">Ordu</option>
+          <option value="Rize">Rize</option>
+          <option value="Sakarya">Sakarya</option>
+          <option value="Samsun">Samsun</option>
+          <option value="Siirt">Siirt</option>
+          <option value="Sinop">Sinop</option>
+          <option value="Sivas">Sivas</option>
+          <option value="Tekirdağ">Tekirdağ</option>
+          <option value="Tokat">Tokat</option>
+          <option value="Trabzon">Trabzon</option>
+          <option value="Tunceli">Tunceli</option>
+          <option value="Şanlıurfa">Şanlıurfa</option>
+          <option value="Uşak">Uşak</option>
+          <option value="Van">Van</option>
+          <option value="Yozgat">Yozgat</option>
+          <option value="Zonguldak">Zonguldak</option>
+          <option value="Aksaray">Aksaray</option>
+          <option value="Bayburt">Bayburt</option>
+          <option value="Karaman">Karaman</option>
+          <option value="Batman">Batman</option>
+          <option value="Şırnak">Şırnak</option>
+          <option value="Bartın">Bartın</option>
+          <option value="Ardahan">Ardahan</option>
+          <option value="Iğdır">Iğdır</option>
+          <option value="Yalova">Yalova</option>
+          <option value="Karabük">Karabük</option>
+          <option value="Osmaniye">Osmaniye</option>
+          <option value="Düzce">Düzce</option>
+        </select>
+        <label>İlçe</label>
+        <select id="f-district" required style="width:100%; border:1.5px solid var(--line); border-radius:11px; padding:11px 13px; font-size:14.5px; background:#FBFDFD; color:var(--ink);">
+          <option value="">Önce il seçin...</option>
+        </select>
 
         <label>Telefon</label>
         <input type="tel" id="f-phone" placeholder="05xx xxx xx xx">
+        <label>2. Telefon (opsiyonel)</label>
+        <input type="tel" id="f-phone2" placeholder="Opsiyonel ikinci numara">
+        <label>Müşteri Notu (özel)</label>
+        <textarea id="f-cust-note" placeholder="Müşteri hakkında kalıcı notlar (ör. yer, tercih, uyarı)..." style="min-height:72px; margin-top:6px; width:100%;"></textarea>
         <div class="hint-banner" id="existingHint">Bu isimle kayıtlı bir müşteri var — yeni işlem, o müşterinin geçmişine eklenecek.</div>
 
         <div class="two-col">
           <div>
             <label>Yapılan İş</label>
-            <input type="text" id="f-work" placeholder="Örn. Filtre değişimi">
+            <div class="work-row">
+              <div style="width:100%;">
+                <div class="work-checklist">
+                  <label><input type="checkbox" class="work-check" value="5'li filtre değişimi"> 5'li filtre değişimi</label>
+                  <label><input type="checkbox" class="work-check" value="4'lü filtre değişimi"> 4'lü filtre değişimi</label>
+                  <label><input type="checkbox" class="work-check" value="3'lü filtre değişimi"> 3'lü filtre değişimi</label>
+                  <label><input type="checkbox" class="work-check" value="Yeni Cihaz Satışı"> Yeni Cihaz Satışı</label>
+                  <label><input type="checkbox" class="work-check" value="2. Montaj"> 2. Montaj</label>
+                  <label><input type="checkbox" class="work-check" value="Musluk Değişimi"> Musluk Değişimi</label>
+                  <label><input type="checkbox" class="work-check" value="Depo Değişimi"> Depo Değişimi</label>
+                  <label><input type="checkbox" class="work-check" value="Diğer"> Diğer</label>
+                </div>
+                <label style="margin-top:12px; display:block;">Notlar</label>
+                <textarea id="f-work-notes" placeholder="Opsiyonel not..." style="min-height:86px; width:100%;"></textarea>
+                <div id="warrantyBlock" style="display:none; margin-top:10px;">
+                  <label style="display:block; margin-bottom:6px; font-weight:700; color:var(--slate);">Garanti Başlangıç Tarihi (isteğe bağlı)</label>
+                  <input type="date" id="f-warranty-date" style="width:220px; padding:8px; border:1.5px solid var(--line); border-radius:8px; background:#FBFDFD;">
+                </div>
+              </div>
+            </div>
           </div>
           <div>
             <label>İşlem Tarihi</label>
@@ -316,8 +487,10 @@
 
         <label>Sonraki Değişim</label>
         <div class="period-toggle">
+          <button type="button" class="period-btn" data-months="3">3 Ay</button>
           <button type="button" class="period-btn active" data-months="6">6 Ay</button>
-          <button type="button" class="period-btn" data-months="12">1 Yıl</button>
+          <button type="button" class="period-btn" data-months="9">9 Ay</button>
+          <button type="button" class="period-btn" data-months="12">12 Ay</button>
         </div>
 
         <div class="next-date-preview">Sonraki hatırlatma: <b id="nextDateText">—</b></div>
@@ -350,7 +523,10 @@
     <div class="card detail-card">
       <div class="detail-gauge" id="detailGauge"></div>
       <div id="detailInfoView">
-        <p class="detail-name" id="detailName">—</p>
+        <div style="display:flex; flex-wrap:wrap; align-items:center; gap:10px;">
+          <p class="detail-name" id="detailName">—</p>
+          <div class="detail-note" id="detailNote"></div>
+        </div>
         <div class="detail-meta" id="detailMeta"></div>
       </div>
       <div id="detailInfoEdit" style="display:none; flex:1;">
@@ -358,8 +534,101 @@
         <input type="text" id="edit-name">
         <label>Adres</label>
         <textarea id="edit-address"></textarea>
+        <label>İl</label>
+        <select id="edit-province" style="width:100%; border:1.5px solid var(--line); border-radius:11px; padding:11px 13px; font-size:14.5px; background:#FBFDFD; color:var(--ink);">
+          <option value="">İl seçin...</option>
+          <option value="İstanbul">İstanbul</option>
+          <option value="Kocaeli">Kocaeli</option>
+          <option value="Ankara">Ankara</option>
+          <option value="Adana">Adana</option>
+          <option value="Adıyaman">Adıyaman</option>
+          <option value="Afyonkarahisar">Afyonkarahisar</option>
+          <option value="Ağrı">Ağrı</option>
+          <option value="Amasya">Amasya</option>
+          <option value="Antalya">Antalya</option>
+          <option value="Artvin">Artvin</option>
+          <option value="Aydın">Aydın</option>
+          <option value="Balıkesir">Balıkesir</option>
+          <option value="Bilecik">Bilecik</option>
+          <option value="Bingöl">Bingöl</option>
+          <option value="Bitlis">Bitlis</option>
+          <option value="Bolu">Bolu</option>
+          <option value="Burdur">Burdur</option>
+          <option value="Bursa">Bursa</option>
+          <option value="Çanakkale">Çanakkale</option>
+          <option value="Çankırı">Çankırı</option>
+          <option value="Çorum">Çorum</option>
+          <option value="Denizli">Denizli</option>
+          <option value="Diyarbakır">Diyarbakır</option>
+          <option value="Edirne">Edirne</option>
+          <option value="Elazığ">Elazığ</option>
+          <option value="Erzincan">Erzincan</option>
+          <option value="Erzurum">Erzurum</option>
+          <option value="Eskişehir">Eskişehir</option>
+          <option value="Gaziantep">Gaziantep</option>
+          <option value="Giresun">Giresun</option>
+          <option value="Gümüşhane">Gümüşhane</option>
+          <option value="Hakkari">Hakkari</option>
+          <option value="Hatay">Hatay</option>
+          <option value="Isparta">Isparta</option>
+          <option value="Mersin">Mersin</option>
+          <option value="İzmir">İzmir</option>
+          <option value="Kars">Kars</option>
+          <option value="Kastamonu">Kastamonu</option>
+          <option value="Kayseri">Kayseri</option>
+          <option value="Kırıkkale">Kırıkkale</option>
+          <option value="Kırklareli">Kırklareli</option>
+          <option value="Kırşehir">Kırşehir</option>
+          <option value="Kilis">Kilis</option>
+          <option value="Konya">Konya</option>
+          <option value="Kütahya">Kütahya</option>
+          <option value="Malatya">Malatya</option>
+          <option value="Manisa">Manisa</option>
+          <option value="Kahramanmaraş">Kahramanmaraş</option>
+          <option value="Mardin">Mardin</option>
+          <option value="Muğla">Muğla</option>
+          <option value="Muş">Muş</option>
+          <option value="Nevşehir">Nevşehir</option>
+          <option value="Niğde">Niğde</option>
+          <option value="Ordu">Ordu</option>
+          <option value="Rize">Rize</option>
+          <option value="Sakarya">Sakarya</option>
+          <option value="Samsun">Samsun</option>
+          <option value="Siirt">Siirt</option>
+          <option value="Sinop">Sinop</option>
+          <option value="Sivas">Sivas</option>
+          <option value="Tekirdağ">Tekirdağ</option>
+          <option value="Tokat">Tokat</option>
+          <option value="Trabzon">Trabzon</option>
+          <option value="Tunceli">Tunceli</option>
+          <option value="Şanlıurfa">Şanlıurfa</option>
+          <option value="Uşak">Uşak</option>
+          <option value="Van">Van</option>
+          <option value="Yozgat">Yozgat</option>
+          <option value="Zonguldak">Zonguldak</option>
+          <option value="Aksaray">Aksaray</option>
+          <option value="Bayburt">Bayburt</option>
+          <option value="Karaman">Karaman</option>
+          <option value="Batman">Batman</option>
+          <option value="Şırnak">Şırnak</option>
+          <option value="Bartın">Bartın</option>
+          <option value="Ardahan">Ardahan</option>
+          <option value="Iğdır">Iğdır</option>
+          <option value="Yalova">Yalova</option>
+          <option value="Karabük">Karabük</option>
+          <option value="Osmaniye">Osmaniye</option>
+          <option value="Düzce">Düzce</option>
+        </select>
+        <label>İlçe</label>
+        <select id="edit-district" style="width:100%; border:1.5px solid var(--line); border-radius:11px; padding:11px 13px; font-size:14.5px; background:#FBFDFD; color:var(--ink);">
+          <option value="">Önce il seçin...</option>
+        </select>
         <label>Telefon</label>
         <input type="tel" id="edit-phone">
+        <label>2. Telefon (opsiyonel)</label>
+        <input type="tel" id="edit-phone2" placeholder="Opsiyonel ikinci numara">
+        <label>Özel Not</label>
+        <textarea id="edit-note" placeholder="Müşteri notu..." style="min-height:70px;"></textarea>
       </div>
       <div class="detail-actions">
         <button class="icon-btn" id="editCustBtn" title="Bilgileri düzenle">✎</button>
@@ -379,10 +648,13 @@
 
 <script>
 let customers = [];
-let selectedMonths = 6;
+  let selectedMonths = 6;
 let currentFilter = 'all';
 let searchTerm = '';
 let activeCustomerId = null;
+
+const warrantyBlock = document.getElementById('warrantyBlock');
+const warrantyInput = document.getElementById('f-warranty-date');
 
 const form = document.getElementById('custForm');
 const dateInput = document.getElementById('f-date');
@@ -390,10 +662,146 @@ const nextDateText = document.getElementById('nextDateText');
 const listArea = document.getElementById('listArea');
 const toast = document.getElementById('toast');
 const phoneInput = document.getElementById('f-phone');
+const phone2Input = document.getElementById('f-phone2');
+const noteInput = document.getElementById('f-work-notes');
+const custNoteInput = document.getElementById('f-cust-note');
 const nameInput = document.getElementById('f-name');
 const existingHint = document.getElementById('existingHint');
+const editPhoneInput = document.getElementById('edit-phone');
+const editPhone2Input = document.getElementById('edit-phone2');
+const editNoteInput = document.getElementById('edit-note');
+const provinceSelect = document.getElementById('f-province');
+const districtSelect = document.getElementById('f-district');
+const editProvinceSelect = document.getElementById('edit-province');
+const editDistrictSelect = document.getElementById('edit-district');
+
+const lockScreen = document.getElementById('lockScreen');
+const lockForm = document.getElementById('lockForm');
+const lockTitle = document.getElementById('lockTitle');
+const lockPassword = document.getElementById('lockPassword');
+const lockPasswordConfirm = document.getElementById('lockPasswordConfirm');
+const lockSubmit = document.getElementById('lockSubmit');
+const lockMessage = document.getElementById('lockMessage');
+const appContent = document.querySelector('.app');
 
 dateInput.value = new Date().toISOString().slice(0,10);
+
+const districtMap = {
+  İstanbul: ['Adalar','Arnavutköy','Ataşehir','Avcılar','Bağcılar','Bahçelievler','Bakırköy','Başakşehir','Bayrampaşa','Beşiktaş','Beykoz','Beylikdüzü','Beyoğlu','Büyükçekmece','Çatalca','Çekmeköy','Esenler','Esenyurt','Eyüpsultan','Fatih','Gaziosmanpaşa','Güngören','Kadıköy','Kağıthane','Kartal','Küçükçekmece','Maltepe','Pendik','Sancaktepe','Sarıyer','Şile','Şişli','Sultanbeyli','Sultangazi','Tuzla','Ümraniye','Üsküdar','Zeytinburnu'],
+  Kocaeli: ['Başiskele','Çayırova','Darıca','Derince','Dilovası','Gebze','Gölcük','Kartepe','Körfez'],
+  Ankara: ['Altındağ','Çankaya','Keçiören','Mamak','Yenimahalle','Sincan','Etimesgut','Pursaklar','Polatlı','Beypazarı','Elmadağ','Gölbaşı','Çubuk','Kızılcahamam','Akyurt','Nallıhan','Ayaş','Kalecik','Şereflikoçhisar','Kazan','Güdül'],
+  İzmir: ['Aliağa','Balçova','Bayındır','Beydağ','Bornova','Buca','Çeşme','Çiğli','Dikili','Foça','Gaziemir','Güzelbahçe','Karabağlar','Karaburun','Karşıyaka','Kemalpaşa','Kınık','Kiraz','Konak','Menderes','Menemen','Narlıdere','Ödemiş','Seferihisar','Selçuk','Tire','Torbalı','Urla'],
+  Antalya: ['Alanya','Aksu','Demre','Döşemealtı','Elmalı','Finike','Gazipaşa','Gündoğmuş','İbradı','Kaş','Kemer','Kepez','Konyaaltı','Korkuteli','Kumluca','Muratpaşa','Serik']
+};
+function populateDistricts(selectElem, province, currentDistrict = ''){
+  selectElem.innerHTML = '<option value="">Önce il seçin...</option>';
+  if (!province || !districtMap[province]) return;
+  selectElem.innerHTML = '<option value="">İlçe seçin...</option>' + districtMap[province].map(d=>`<option value="${d}">${d}</option>`).join('');
+  if (currentDistrict) selectElem.value = currentDistrict;
+}
+function onlyDigits(value){
+  return value.replace(/\D/g, '');
+}
+function forceUpperCase(value){
+  return value.toLocaleUpperCase('tr-TR');
+}
+
+let lockChangeMode = false;
+function setLockMode(){
+  const saved = localStorage.getItem('ttsu_password');
+  if (saved) {
+    if (lockChangeMode) {
+      lockTitle.textContent = 'Yeni şifre belirleyin';
+      lockPasswordConfirm.style.display = '';
+      lockPasswordConfirm.required = true;
+      lockSubmit.textContent = 'Şifreyi Güncelle';
+    } else {
+      lockTitle.textContent = 'Şifre ile giriş yapın';
+      lockPasswordConfirm.style.display = 'none';
+      lockPasswordConfirm.required = false;
+      lockSubmit.textContent = 'Giriş Yap';
+    }
+  } else {
+    lockTitle.textContent = 'Yeni şifre belirleyin';
+    lockPasswordConfirm.style.display = '';
+    lockPasswordConfirm.required = true;
+    lockSubmit.textContent = 'Kaydet ve Gir';
+  }
+  lockMessage.textContent = '';
+  lockPassword.value = '';
+  lockPasswordConfirm.value = '';
+}
+
+function unlockApp(){
+  lockScreen.style.display = 'none';
+  appContent.style.opacity = '1';
+}
+
+function lockApp(){
+  lockScreen.style.display = 'flex';
+  appContent.style.opacity = '0.2';
+}
+
+lockForm.addEventListener('submit', (e) => {
+  e.preventDefault();
+  const saved = localStorage.getItem('ttsu_password');
+  const password = lockPassword.value.trim();
+  if (!password) {
+    lockMessage.textContent = 'Şifre boş olamaz.';
+    return;
+  }
+  if (saved && !lockChangeMode && password.toLowerCase() === 'parola değiştir') {
+    lockChangeMode = true;
+    setLockMode();
+    lockMessage.textContent = 'Yeni parolanızı girin ve onaylayın.';
+    return;
+  }
+  if (saved && !lockChangeMode) {
+    if (password === saved) {
+      unlockApp();
+    } else {
+      lockMessage.textContent = 'Şifre yanlış, tekrar deneyin.';
+    }
+    return;
+  }
+  const confirmValue = lockPasswordConfirm.value.trim();
+  if (!confirmValue) {
+    lockMessage.textContent = 'Şifre tekrarını girin.';
+    return;
+  }
+  if (password !== confirmValue) {
+    lockMessage.textContent = 'Şifreler eşleşmiyor.';
+    return;
+  }
+  localStorage.setItem('ttsu_password', password);
+  lockChangeMode = false;
+  setLockMode();
+  unlockApp();
+});
+
+setLockMode();
+lockApp();
+function forceUpperCase(value){
+  return value.toLocaleUpperCase('tr-TR');
+}
+
+[phoneInput, phone2Input, editPhoneInput, editPhone2Input].forEach(input => {
+  if (!input) return;
+  input.addEventListener('input', () => {
+    const start = input.selectionStart;
+    input.value = onlyDigits(input.value);
+    input.setSelectionRange(start, start);
+  });
+});
+
+[noteInput, custNoteInput, editNoteInput].forEach(input => {
+  if (!input) return;
+  input.addEventListener('input', () => {
+    const start = input.selectionStart;
+    input.value = forceUpperCase(input.value);
+    input.setSelectionRange(start, start);
+  });
+});
 
 function switchTab(tab){
   document.querySelectorAll('.tab-btn').forEach(b=>b.classList.toggle('active', b.dataset.tab===tab));
@@ -447,6 +855,27 @@ document.querySelectorAll('.period-btn').forEach(btn=>{
     updatePreview();
   });
 });
+// Toggle chip active style when checkboxes change
+provinceSelect.addEventListener('change', ()=> populateDistricts(districtSelect, provinceSelect.value));
+editProvinceSelect.addEventListener('change', ()=> populateDistricts(editDistrictSelect, editProvinceSelect.value));
+
+document.querySelectorAll('.work-check').forEach(chk=>{
+  chk.addEventListener('change', ()=>{
+    const lab = chk.parentElement;
+    if(chk.checked) lab.classList.add('chip-active'); else lab.classList.remove('chip-active');
+    // if Yeni Cihaz Satışı seçildiyse garanti tarih alanını göster ve zorunlu yap
+    if(chk.value === 'Yeni Cihaz Satışı'){
+      if(chk.checked){
+        warrantyBlock.style.display = 'block';
+        warrantyInput.required = true;
+      } else {
+        warrantyInput.required = false;
+        warrantyBlock.style.display = 'none';
+        warrantyInput.value = '';
+      }
+    }
+  });
+});
 function updatePreview(){
   const base = dateInput.value || new Date().toISOString().slice(0,10);
   nextDateText.textContent = fmtDate(addMonths(base, selectedMonths));
@@ -460,7 +889,10 @@ nameInput.addEventListener('input', ()=>{
   existingHint.classList.toggle('show', !!match);
   if(match){
     document.getElementById('f-address').value = match.address;
-    phoneInput.value = match.phone;
+    provinceSelect.value = match.province || '';
+    populateDistricts(districtSelect, provinceSelect.value, match.district || '');
+    phoneInput.value = match.phone || '';
+    phone2Input.value = match.phone2 || '';
   }
 });
 
@@ -468,15 +900,26 @@ form.addEventListener('submit', async (e)=>{
   e.preventDefault();
   const name = document.getElementById('f-name').value.trim().toLocaleUpperCase('tr-TR');
   const address = document.getElementById('f-address').value.trim().toLocaleUpperCase('tr-TR');
+  const province = provinceSelect.value;
+  const district = districtSelect.value;
   const phone = phoneInput.value.trim();
-  const work = document.getElementById('f-work').value.trim().toLocaleUpperCase('tr-TR');
+  const phone2 = phone2Input.value.trim();
+  const selectedWorks = Array.from(document.querySelectorAll('.work-check:checked')).map(i=>i.value.trim());
+  if(selectedWorks.length === 0){ showToast('Lütfen yapılan işi seçin'); return; }
+  const work = selectedWorks.join(', ').toLocaleUpperCase('tr-TR');
+  const note = document.getElementById('f-work-notes').value.trim();
+  const custNote = document.getElementById('f-cust-note').value.trim();
+  const warrantyStart = warrantyInput.value || '';
   const date = dateInput.value;
   const amount = parseFloat(document.getElementById('f-amount').value) || 0;
 
   if(!name){ showToast('Lütfen ad soyad girin'); return; }
   if(!address){ showToast('Lütfen adres girin'); return; }
+  if(!province){ showToast('Lütfen il seçin'); return; }
+  if(!district){ showToast('Lütfen ilçe seçin'); return; }
   if(!phone){ showToast('Lütfen telefon girin'); return; }
   if(!work){ showToast('Lütfen yapılan işi girin'); return; }
+  if(work.toLowerCase().includes('yeni cihaz satışı') && !warrantyStart){ showToast('Yeni cihaz satışı için garanti başlangıç tarihi girin'); return; }
   if(!date){ showToast('Lütfen işlem tarihi seçin'); return; }
 
   const nextDate = addMonths(date, selectedMonths);
@@ -484,8 +927,9 @@ form.addEventListener('submit', async (e)=>{
 
   const record = {
     id: Date.now().toString(36) + Math.random().toString(36).slice(2,6),
-    date, work, nextDate, periodMonths: selectedMonths, amount
+    date, work, note, nextDate, periodMonths: selectedMonths, amount
   };
+  if(warrantyStart){ record.warrantyStart = warrantyStart; record.warrantyEnd = addMonths(warrantyStart, 24); }
 
   const submitBtn = form.querySelector('.submit-btn');
   submitBtn.disabled = true;
@@ -493,19 +937,32 @@ form.addEventListener('submit', async (e)=>{
   try{
     let existing = customers.find(c => normalizeName(c.name) === normName);
     if(existing){
+      const phone2ForUpdate = phone2 || existing.phone2 || '';
       const res = await fetch(`/api/customers/${existing.id}/records`, {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({ name, address, phone, record })
+        body: JSON.stringify({ name, address, province, district, phone, phone2: phone2ForUpdate, note: custNote || existing.note || '', record })
       });
       if(!res.ok) throw new Error('add-record failed');
       const updated = await res.json();
       Object.assign(existing, updated);
+      if(custNote){
+        existing.note = custNote;
+      }
+      existing.phone2 = phone2ForUpdate;
+      existing.district = district;
+      try{
+        await fetch(`/api/customers/${existing.id}`, {
+          method: 'PUT',
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({ name: existing.name, address: existing.address, district: existing.district, phone: existing.phone, phone2: existing.phone2, note: existing.note })
+        });
+      }catch(e){ /* ignore update error */ }
       showToast('İşlem, mevcut müşteriye eklendi');
     }else{
       const newCustomer = {
         id: Date.now().toString(36) + Math.random().toString(36).slice(2,6),
-        name, address, phone, records:[record]
+        name, address, province, district, phone, phone2, note: custNote, records:[record]
       };
       const res = await fetch('/api/customers', {
         method: 'POST',
@@ -519,14 +976,41 @@ form.addEventListener('submit', async (e)=>{
     }
   }catch(err){
     console.error('Kaydetme hatası', err);
-    showToast('Kaydetme hatası — sunucuya ulaşılamadı');
-    submitBtn.disabled = false;
-    return;
+    // Sunucuya ulaşılamıyorsa yerel olarak kaydet (test için)
+    try{
+      let existing = customers.find(c => normalizeName(c.name) === normName);
+      if(existing){
+        existing.records.push(record);
+        existing.phone2 = phone2 || existing.phone2 || '';
+        existing.district = district || existing.district || '';
+        if(custNote) existing.note = custNote;
+        showToast('Sunucuya ulaşılamadı — işlem yerel olarak eklendi');
+      }else{
+        const newCustomerLocal = {
+          id: Date.now().toString(36) + Math.random().toString(36).slice(2,6),
+          name, address, province, district, phone, phone2, note: custNote, records:[record]
+        };
+        customers.push(newCustomerLocal);
+        showToast('Sunucuya ulaşılamadı — yeni müşteri yerel olarak kaydedildi');
+      }
+    }catch(inner){
+      console.error('Yerel kaydetme hatası', inner);
+      showToast('Kaydetme hatası — sunucuya ulaşılamadı');
+      submitBtn.disabled = false;
+      return;
+    }
   }
 
   submitBtn.disabled = false;
   render();
   form.reset();
+  // clear chip active states and notes
+  document.querySelectorAll('.work-check').forEach(c=>c.parentElement.classList.remove('chip-active'));
+  document.getElementById('f-work-notes').value = '';
+  document.getElementById('f-cust-note').value = '';
+  document.getElementById('f-phone2').value = '';
+  warrantyBlock.style.display = 'none';
+  warrantyInput.value = '';
   dateInput.value = new Date().toISOString().slice(0,10);
   selectedMonths = 6;
   document.querySelectorAll('.period-btn').forEach(b=>b.classList.remove('active'));
@@ -566,7 +1050,10 @@ function render(){
 
   let items = customers.map(c => {
     const last = latestRecord(c);
-    return {...c, last, status: statusOf(last.nextDate)};
+    // warranty: find latest record that has warrantyStart
+    const warrRec = [...(c.records||[])].filter(r=>r.warrantyStart).sort((a,b)=> new Date(b.warrantyStart) - new Date(a.warrantyStart))[0];
+    const warrantyEnd = warrRec ? addMonths(warrRec.warrantyStart, 24) : null;
+    return {...c, last, status: statusOf(last.nextDate), warrantyEnd };
   });
 
   if(searchTerm){
@@ -600,6 +1087,7 @@ function render(){
           <th>Ad Soyad</th>
           <th>Adres</th>
           <th>Telefon</th>
+          <th>Garanti</th>
           <th>Son İşlem</th>
           <th>Durum</th>
           <th></th>
@@ -613,8 +1101,9 @@ function render(){
         <tr onclick="openDetail('${c.id}')">
           <td class="col-gauge"><span class="row-dot ${c.status.key}"></span></td>
           <td class="col-name">${escapeHtml(c.name)}</td>
-          <td class="col-address">${escapeHtml(c.address)}</td>
-          <td class="col-phone">${escapeHtml(c.phone)}</td>
+          <td class="col-address">${escapeHtml(c.district || c.address)}</td>
+          <td class="col-phone">${escapeHtml(c.phone)}${c.phone2 ? `<br>${escapeHtml(c.phone2)}` : ''}</td>
+          <td class="col-warranty">${c.warrantyEnd ? warrantyRemainingText(c.warrantyEnd) : '-'}</td>
           <td class="col-date${(c.status.key==='soon'||c.status.key==='overdue') ? ' date-warning' : ''}">${fmtDate(c.last.date)}</td>
           <td class="col-status"><span class="status-badge ${statusClass}">${c.status.label} · ${statusText}</span></td>
           <td class="col-chevron">›</td>
@@ -655,22 +1144,50 @@ function renderDetail(){
 
   document.getElementById('detailGauge').innerHTML = gaugeSVG(pct, status.key);
   document.getElementById('detailName').textContent = c.name;
-  document.getElementById('detailMeta').innerHTML = `📍 ${escapeHtml(c.address)}<br>📞 ${escapeHtml(c.phone)}`;
+  // compute warranty info for customer (latest warranty-bearing record)
+  const warrRec = [...(c.records||[])].filter(r=>r.warrantyStart).sort((a,b)=> new Date(b.warrantyStart) - new Date(a.warrantyStart))[0];
+  let warrantyLine = '';
+  if(warrRec){
+    const rem = warrantyRemainingText(warrRec.warrantyEnd);
+    warrantyLine = `<div style="margin-top:6px; font-weight:700; color:${rem.includes('bitti')? 'var(--coral)' : 'var(--petrol-dark)'}">🔒 Garanti: ${escapeHtml(rem)}${warrRec.warrantyEnd ? ` — bitiş: ${fmtDate(warrRec.warrantyEnd)}` : ''}</div>`;
+  } else {
+    warrantyLine = `<div style="margin-top:6px; color:var(--slate)">🔒 Garanti: -</div>`;
+  }
+  // compute total amount paid by this customer across records
+  const totalAmount = (c.records || []).reduce((sum, r) => sum + (Number(r.amount) || 0), 0);
+  const totalLine = `<div style="margin-top:6px; font-weight:700; color:var(--petrol-dark)">💰 Toplam alınan ücret: ₺${Number(totalAmount).toLocaleString('tr-TR', {minimumFractionDigits:2, maximumFractionDigits:2})}</div>`;
+  document.getElementById('detailNote').innerHTML = c.note ? `📝 ${escapeHtml(c.note)}` : '';
+  const phoneLines = [`📞 ${escapeHtml(c.phone)}`];
+  if (c.phone2) phoneLines.push(`📞 ${escapeHtml(c.phone2)}`);
+  const phoneLine = `<div style="margin-top:10px;">${phoneLines.join('<br>')}</div>`;
+  const districtLine = c.district ? `<div>İlçe: ${escapeHtml(c.district)}</div>` : '';
+  document.getElementById('detailMeta').innerHTML = `📍 ${escapeHtml(c.address)}${districtLine}<br>${phoneLine}${warrantyLine}${totalLine}`;
 
   const records = [...c.records].sort((a,b)=> new Date(b.date) - new Date(a.date));
   document.getElementById('recordList').innerHTML = records.map(r=>{
     const st = statusOf(r.nextDate);
-    const periodLabel = r.periodMonths === 12 ? '1 yıl' : '6 ay';
+    const periodLabel = r.periodMonths === 12 ? '1 yıl' : (r.periodMonths + ' ay');
+    const warrantyInfo = r.warrantyStart ? `\n        <div class="record-note">Garanti: ${fmtDate(r.warrantyStart)} → ${fmtDate(r.warrantyEnd)} · ${warrantyRemainingText(r.warrantyEnd)}</div>` : '';
     return `
     <div class="record-item">
       <div class="record-dot ${st.key}"></div>
       <div class="record-body">
         <p class="record-work">${escapeHtml(r.work)}${r.amount ? ` · <span class="record-amount">₺${Number(r.amount).toLocaleString('tr-TR')}</span>` : ''}</p>
+        ${r.note ? `<div class="record-note">${escapeHtml(r.note)}</div>` : ''}
+        ${warrantyInfo}
         <div class="record-dates">${fmtDate(r.date)} yapıldı · ${periodLabel} sonra (<span${(st.key==='soon'||st.key==='overdue') ? ' style="color:var(--coral);font-weight:600;"' : ''}>${fmtDate(r.nextDate)}</span>) hatırlat</div>
       </div>
       <button class="icon-btn danger" title="Kaydı sil" onclick="deleteRecord('${c.id}','${r.id}')">✕</button>
     </div>`;
   }).join('');
+}
+
+function warrantyRemainingText(endIso){
+  const today = new Date(); today.setHours(0,0,0,0);
+  const end = new Date(endIso + 'T00:00:00');
+  const diff = Math.round((end - today)/86400000);
+  if(diff < 0) return 'Garanti bitti';
+  return `${diff} gün kaldı`;
 }
 document.getElementById('editCustBtn').addEventListener('click', ()=>{
   const c = customers.find(x => x.id === activeCustomerId);
@@ -678,6 +1195,8 @@ document.getElementById('editCustBtn').addEventListener('click', ()=>{
   document.getElementById('edit-name').value = c.name;
   document.getElementById('edit-address').value = c.address;
   document.getElementById('edit-phone').value = c.phone;
+  document.getElementById('edit-phone2').value = c.phone2 || '';
+  document.getElementById('edit-note').value = c.note || '';
   document.getElementById('detailInfoView').style.display = 'none';
   document.getElementById('detailInfoEdit').style.display = 'block';
   document.getElementById('editCustBtn').style.display = 'none';
@@ -699,16 +1218,20 @@ document.getElementById('saveCustBtn').addEventListener('click', async ()=>{
   if(!c) return;
   const name = document.getElementById('edit-name').value.trim().toLocaleUpperCase('tr-TR');
   const address = document.getElementById('edit-address').value.trim().toLocaleUpperCase('tr-TR');
+  const province = editProvinceSelect.value;
+  const district = document.getElementById('edit-district').value;
   const phone = document.getElementById('edit-phone').value.trim();
-  if(!name || !address || !phone){ showToast('Tüm alanları doldurun'); return; }
+  const phone2 = document.getElementById('edit-phone2').value.trim();
+  const note = document.getElementById('edit-note').value.trim();
+  if(!name || !address || !province || !district || !phone){ showToast('Tüm alanları doldurun'); return; }
   try{
     const res = await fetch(`/api/customers/${c.id}`, {
       method: 'PUT',
       headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({ name, address, phone })
+      body: JSON.stringify({ name, address, province, district, phone, phone2, note })
     });
     if(!res.ok) throw new Error('update failed');
-    c.name = name; c.address = address; c.phone = phone;
+    c.name = name; c.address = address; c.district = district; c.phone = phone; c.phone2 = phone2; c.note = note;
     exitEditMode();
     renderDetail();
     showToast('Müşteri bilgileri güncellendi');
@@ -718,6 +1241,7 @@ document.getElementById('saveCustBtn').addEventListener('click', async ()=>{
   }
 });
 document.getElementById('deleteCustBtn').addEventListener('click', async ()=>{
+  if(!confirm('Müşteriyi silmek istediğinize emin misiniz? Bu işlem geri alınamaz.')) return;
   try{
     const res = await fetch(`/api/customers/${activeCustomerId}`, { method:'DELETE' });
     if(!res.ok) throw new Error('delete failed');

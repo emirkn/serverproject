@@ -1,24 +1,25 @@
-// Türk Teknik Su Arıtma - Müşteri Takip sunucusu
-// Render gibi platformlarda dosya sistemi kalıcı olmadığı için veriler
-// MongoDB Atlas (ücretsiz M0 katmanı) üzerinde tutulur.
-
 try { require('dotenv').config(); } catch (_) { /* .env yoksa sorun değil, Render ortam değişkenini kendi panelinden verir */ }
 
 const http = require('http');
 const fs = require('fs').promises;
 const path = require('path');
-const { MongoClient } = require('mongodb');
+const { createClient } = require('@supabase/supabase-js');
 const ExcelJS = require('exceljs');
 const cron = require('node-cron');
 
 const PORT = process.env.PORT || 3000;
-const MONGODB_URI = process.env.MONGODB_URI;
+const SUPABASE_URL = process.env.SUPABASE_URL;
+const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const PUBLIC_DIR = path.join(__dirname, 'public');
 
-if (!MONGODB_URI) {
-  console.error('HATA: MONGODB_URI ortam değişkeni tanımlı değil. Render panelinden Environment Variables kısmına eklemeniz gerekiyor.');
+if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+  console.error('HATA: SUPABASE_URL veya SUPABASE_SERVICE_ROLE_KEY ortam değişkeni tanımlı değil. Render panelinden Environment Variables kısmına eklemeniz gerekiyor.');
   process.exit(1);
 }
+
+const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+  auth: { persistSession: false }
+});
 
 const MIME_TYPES = {
   '.html': 'text/html; charset=utf-8',
@@ -31,15 +32,19 @@ const MIME_TYPES = {
   '.ico': 'image/x-icon'
 };
 
-let customersCollection;
-
 async function connectDB() {
-  const client = new MongoClient(MONGODB_URI);
-  await client.connect();
-  const db = client.db('musteri_takip');
-  customersCollection = db.collection('customers');
-  await customersCollection.createIndex({ id: 1 }, { unique: true });
-  console.log('MongoDB Atlas bağlantısı kuruldu.');
+  const { error } = await supabase
+    .from('customers')
+    .select('id')
+    .limit(1);
+
+  if (error) {
+    console.error('Supabase bağlantısı kurulamadı:', error.message);
+    console.error('Lütfen Supabase projenizde `customers` tablosunun var olduğundan emin olun.');
+    throw error;
+  }
+
+  console.log('Supabase bağlantısı doğrulandı.');
 }
 
 function sendJSON(res, status, data) {
@@ -86,10 +91,13 @@ async function serveStatic(req, res) {
 
 // Export customers + records to Excel (.xlsx)
 async function exportToExcel() {
-  if (!customersCollection) throw new Error('DB not connected');
   const rows = [];
-  const customers = await customersCollection.find({}, { projection: { _id: 0 } }).toArray();
-  for (const c of customers) {
+  const { data: customers, error } = await supabase
+    .from('customers')
+    .select('id,name,address,phone,province,district,phone2,note,records');
+
+  if (error) throw error;
+  for (const c of customers || []) {
     const recs = Array.isArray(c.records) && c.records.length ? c.records : [{ id:'', date:'', work:'', note:'', nextDate:'', periodMonths:'', amount:'' }];
     for (const r of recs) {
       rows.push({
@@ -160,8 +168,17 @@ const server = http.createServer(async (req, res) => {
 
     // GET /api/customers  -> tüm müşterileri getir
     if (url === '/api/customers' && req.method === 'GET') {
-      const customers = await customersCollection.find({}, { projection: { _id: 0 } }).toArray();
-      sendJSON(res, 200, customers);
+      const { data: customers, error } = await supabase
+        .from('customers')
+        .select('id,name,address,phone,province,district,phone2,note,records');
+
+      if (error) {
+        console.error('GET /api/customers hata:', error);
+        sendJSON(res, 500, { error: 'Veri tabanı hatası' });
+        return;
+      }
+
+      sendJSON(res, 200, customers || []);
       return;
     }
 
@@ -173,9 +190,18 @@ const server = http.createServer(async (req, res) => {
         sendJSON(res, 400, { error: 'Geçersiz müşteri verisi' });
         return;
       }
-      await customersCollection.insertOne(customer);
-      const { _id, ...clean } = customer;
-      sendJSON(res, 200, clean);
+
+      const { data, error } = await supabase
+        .from('customers')
+        .insert([{ ...customer, records: customer.records || [] }]);
+
+      if (error) {
+        console.error('POST /api/customers hata:', error);
+        sendJSON(res, 500, { error: 'Veri tabanı hatası' });
+        return;
+      }
+
+      sendJSON(res, 200, data[0] || customer);
       return;
     }
 
@@ -184,21 +210,41 @@ const server = http.createServer(async (req, res) => {
       const custId = parts[2];
       const body = await readBody(req);
       const { name, address, province, district, phone, phone2, note, record } = JSON.parse(body);
-      const update = { name, address, phone };
+      const update = {};
+      if (name !== undefined) update.name = name;
+      if (address !== undefined) update.address = address;
+      if (phone !== undefined) update.phone = phone;
       if (province !== undefined && province !== '') update.province = province;
       if (district !== undefined && district !== '') update.district = district;
       if (phone2 !== undefined && phone2 !== '') update.phone2 = phone2;
       if (note !== undefined) update.note = note;
-      const result = await customersCollection.findOneAndUpdate(
-        { id: custId },
-        { $set: update, $push: { records: record } },
-        { returnDocument: 'after', projection: { _id: 0 } }
-      );
-      if (!result || !result.value) {
+
+      const { data: existing, error: fetchError } = await supabase
+        .from('customers')
+        .select('records')
+        .eq('id', custId)
+        .single();
+
+      if (fetchError || !existing) {
         sendJSON(res, 404, { error: 'Müşteri bulunamadı' });
         return;
       }
-      sendJSON(res, 200, result.value);
+
+      const updatedRecords = Array.isArray(existing.records) ? [...existing.records, record] : [record];
+      const { data, error } = await supabase
+        .from('customers')
+        .update({ ...update, records: updatedRecords })
+        .eq('id', custId)
+        .select('id,name,address,phone,province,district,phone2,note,records')
+        .single();
+
+      if (error || !data) {
+        console.error('POST /api/customers/:id/records hata:', error);
+        sendJSON(res, 500, { error: 'Veri tabanı hatası' });
+        return;
+      }
+
+      sendJSON(res, 200, data);
       return;
     }
 
@@ -206,7 +252,31 @@ const server = http.createServer(async (req, res) => {
     if (parts.length === 5 && parts[0] === 'api' && parts[1] === 'customers' && parts[3] === 'records' && req.method === 'DELETE') {
       const custId = parts[2];
       const recId = parts[4];
-      await customersCollection.updateOne({ id: custId }, { $pull: { records: { id: recId } } });
+      const { data: existing, error: fetchError } = await supabase
+        .from('customers')
+        .select('records')
+        .eq('id', custId)
+        .single();
+
+      if (fetchError || !existing) {
+        sendJSON(res, 404, { error: 'Müşteri bulunamadı' });
+        return;
+      }
+
+      const filtered = Array.isArray(existing.records)
+        ? existing.records.filter(r => r.id !== recId)
+        : [];
+      const { error } = await supabase
+        .from('customers')
+        .update({ records: filtered })
+        .eq('id', custId);
+
+      if (error) {
+        console.error('DELETE /api/customers/:id/records/:recId hata:', error);
+        sendJSON(res, 500, { error: 'Veri tabanı hatası' });
+        return;
+      }
+
       sendJSON(res, 200, { ok: true });
       return;
     }
@@ -236,7 +306,17 @@ const server = http.createServer(async (req, res) => {
     // DELETE /api/customers/:id -> müşteriyi sil
     if (parts.length === 3 && parts[0] === 'api' && parts[1] === 'customers' && req.method === 'DELETE') {
       const custId = parts[2];
-      await customersCollection.deleteOne({ id: custId });
+      const { error } = await supabase
+        .from('customers')
+        .delete()
+        .eq('id', custId);
+
+      if (error) {
+        console.error('DELETE /api/customers/:id hata:', error);
+        sendJSON(res, 500, { error: 'Veri tabanı hatası' });
+        return;
+      }
+
       sendJSON(res, 200, { ok: true });
       return;
     }
@@ -313,6 +393,6 @@ connectDB().then(() => {
     console.log(`Türk Teknik Su Arıtma - Müşteri Takip sunucusu http://localhost:${PORT} adresinde çalışıyor`);
   });
 }).catch(err => {
-  console.error('MongoDB bağlantı hatası:', err);
+  console.error('Supabase bağlantı hatası:', err);
   process.exit(1);
 });

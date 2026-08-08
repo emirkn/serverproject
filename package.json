@@ -4,12 +4,14 @@
   "description": "Türk Teknik Su Arıtma - Müşteri Takip uygulaması (Node.js + MongoDB Atlas)",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "supabase:migrate": "node scripts/run_migration.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.36.0",
     "dotenv": "^16.4.5",
     "exceljs": "^4.3.0",
-    "node-cron": "^3.0.2"
+    "node-cron": "^3.0.2",
+    "pg": "^8.11.0"
   }
 }

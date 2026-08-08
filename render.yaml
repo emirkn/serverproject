@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: turk-teknik-server
+    env: node
+    repo: https://github.com/emirkn/serverproject
+    branch: main
+    buildCommand: npm ci
+    startCommand: npm start
+    plan: free

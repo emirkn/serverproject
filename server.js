@@ -290,16 +290,21 @@ const server = http.createServer(async (req, res) => {
       if (district !== undefined && district !== '') update.district = district;
       if (phone2 !== undefined) update.phone2 = phone2;
       if (note !== undefined) update.note = note;
-      const result = await customersCollection.findOneAndUpdate(
-        { id: custId },
-        { $set: update },
-        { returnDocument: 'after', projection: { _id: 0 } }
-      );
-      if (!result || !result.value) {
+
+      const { data, error } = await supabase
+        .from('customers')
+        .update(update)
+        .eq('id', custId)
+        .select('id,name,address,phone,province,district,phone2,note,records')
+        .single();
+
+      if (error || !data) {
+        console.error('PUT /api/customers/:id hata:', error);
         sendJSON(res, 404, { error: 'Müşteri bulunamadı' });
         return;
       }
-      sendJSON(res, 200, result.value);
+
+      sendJSON(res, 200, data);
       return;
     }
 

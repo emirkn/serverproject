@@ -1,4 +1,4 @@
-# Türk Teknik Su Arıtma — Müşteri Takip
+# E-Su Arıtma — Müşteri Takip
 
 Bu proje artık yerel SQLite veritabanı (`data/database.sqlite`) kullanan bir
 Node.js uygulamasıdır.

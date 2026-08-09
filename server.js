@@ -393,7 +393,7 @@ connectDB().then(() => {
   }
 
   server.listen(PORT, () => {
-    console.log(`Türk Teknik Su Arıtma - Müşteri Takip sunucusu http://localhost:${PORT} adresinde çalışıyor`);
+    console.log(`E-Su Arıtma - Müşteri Takip sunucusu http://localhost:${PORT} adresinde çalışıyor`);
   });
 }).catch(err => {
   console.error('SQLite başlatma hatası:', err);

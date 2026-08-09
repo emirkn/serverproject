@@ -4,6 +4,6 @@ services:
     env: node
     repo: https://github.com/emirkn/serverproject
     branch: main
-    buildCommand: npm ci
+    buildCommand: npm install
     startCommand: npm start
     plan: free

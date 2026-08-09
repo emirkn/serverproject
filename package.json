@@ -1,17 +1,15 @@
 {
   "name": "turk-teknik-su-aritma-musteri-takip",
   "version": "1.0.0",
-  "description": "Türk Teknik Su Arıtma - Müşteri Takip uygulaması (Node.js + MongoDB Atlas)",
+  "description": "Türk Teknik Su Arıtma - Müşteri Takip uygulaması (Node.js + SQLite)",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js",
-    "supabase:migrate": "node scripts/run_migration.js"
+    "start": "node server.js"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.36.0",
+    "better-sqlite3": "^8.5.0",
     "dotenv": "^16.4.5",
     "exceljs": "^4.3.0",
-    "node-cron": "^3.0.2",
-    "pg": "^8.11.0"
+    "node-cron": "^3.0.2"
   }
 }

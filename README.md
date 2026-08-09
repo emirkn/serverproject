@@ -1,21 +1,25 @@
 # Türk Teknik Su Arıtma — Müşteri Takip
 
-50.000+ müşteri gibi ciddi bir veri hacmi için bu sürüm **buluta** taşınacak
-şekilde hazırlandı:
+Bu proje artık yerel SQLite veritabanı (`data/database.sqlite`) kullanan bir
+Node.js uygulamasıdır.
 
-- **Sunucu:** Render (ücretsiz web servisi)
-- **Veritabanı:** MongoDB Atlas (ücretsiz M0 katmanı — 512 MB, süresiz)
+- **Sunucu:** Node.js
+- **Veritabanı:** SQLite
 
-## Neden bu ikili?
+> Dikkat: SQLite, dosya tabanlı bir veritabanıdır. Render gibi geçici disk
+> kullanan hostlarda veya her deploy sonrası sıfırlanan ortamlarda veri kalıcı
+> olmayabilir. Lokal kullanım için uygundur.
 
-Render'ın ücretsiz servislerinde disk **kalıcı değildir** — servis 15 dakika
-işlem görmeyince uyur, tekrar uyandığında veya her yeniden dağıtımda
-(redeploy) sunucudaki dosyalar sıfırlanır. Yani veriyi düz bir dosyada
-(`customers.json` gibi) tutarsak, sunucu her uyandığında **50 bin müşteri
-kaydı silinmiş olurdu**. Bu yüzden veriyi Render'ın dışında, kalıcı ve
-ücretsiz bir veritabanında (MongoDB Atlas M0) tutuyoruz. Atlas M0 süresiz
-ücretsizdir, kredi kartı istemez ve 512 MB'lık depolama 50 bin müşteri kaydı
-için fazlasıyla yeterlidir.
+## Başlatma
+
+1. `npm install`
+2. `npm start`
+3. `http://localhost:3000` adresini açın.
+
+## Yerel geliştirme
+
+- Veriler `data/database.sqlite` dosyasında saklanır.
+- `server.js` uygulamanın tüm API ve statik içerik sunucusudur.
 
 ## 1) MongoDB Atlas kurulumu (veritabanı)
 

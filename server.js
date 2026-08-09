@@ -1,25 +1,42 @@
-try { require('dotenv').config(); } catch (_) { /* .env yoksa sorun değil, Render ortam değişkenini kendi panelinden verir */ }
+try { require('dotenv').config(); } catch (_) { /* .env yoksa sorun değil */ }
 
 const http = require('http');
-const fs = require('fs').promises;
+const fs = require('fs');
+const fsp = fs.promises;
 const path = require('path');
-const { createClient } = require('@supabase/supabase-js');
+const Database = require('better-sqlite3');
 const ExcelJS = require('exceljs');
 const cron = require('node-cron');
 
 const PORT = process.env.PORT || 3000;
-const SUPABASE_URL = process.env.SUPABASE_URL;
-const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const PUBLIC_DIR = path.join(__dirname, 'public');
+const DB_FILE = path.join(__dirname, 'data', 'database.sqlite');
 
-if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-  console.error('HATA: SUPABASE_URL veya SUPABASE_SERVICE_ROLE_KEY ortam değişkeni tanımlı değil. Render panelinden Environment Variables kısmına eklemeniz gerekiyor.');
-  process.exit(1);
+let db;
+try {
+  fs.mkdirSync(path.join(__dirname, 'data'), { recursive: true });
+} catch (_) {}
+
+db = new Database(DB_FILE);
+
+db.prepare(`
+  CREATE TABLE IF NOT EXISTS customers (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    address TEXT,
+    phone TEXT,
+    province TEXT,
+    district TEXT,
+    phone2 TEXT,
+    note TEXT,
+    records TEXT DEFAULT '[]'
+  )
+`).run();
+
+function connectDB() {
+  console.log('SQLite database hazır:', DB_FILE);
+  return Promise.resolve();
 }
-
-const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
-  auth: { persistSession: false }
-});
 
 const MIME_TYPES = {
   '.html': 'text/html; charset=utf-8',
@@ -31,21 +48,6 @@ const MIME_TYPES = {
   '.svg': 'image/svg+xml',
   '.ico': 'image/x-icon'
 };
-
-async function connectDB() {
-  const { error } = await supabase
-    .from('customers')
-    .select('id')
-    .limit(1);
-
-  if (error) {
-    console.error('Supabase bağlantısı kurulamadı:', error.message);
-    console.error('Lütfen Supabase projenizde `customers` tablosunun var olduğundan emin olun.');
-    throw error;
-  }
-
-  console.log('Supabase bağlantısı doğrulandı.');
-}
 
 function sendJSON(res, status, data) {
   res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8' });
@@ -79,7 +81,7 @@ async function serveStatic(req, res) {
   }
 
   try {
-    const content = await fs.readFile(fullPath);
+    const content = await fsp.readFile(fullPath);
     const ext = path.extname(fullPath);
     res.writeHead(200, { 'Content-Type': MIME_TYPES[ext] || 'application/octet-stream' });
     res.end(content);
@@ -92,14 +94,17 @@ async function serveStatic(req, res) {
 // Export customers + records to Excel (.xlsx)
 async function exportToExcel() {
   const rows = [];
-  const { data: customers, error } = await supabase
-    .from('customers')
-    .select('id,name,address,phone,province,district,phone2,note,records');
-
-  if (error) throw error;
+  const customers = db.prepare('SELECT id,name,address,phone,province,district,phone2,note,records FROM customers').all();
   for (const c of customers || []) {
-    const recs = Array.isArray(c.records) && c.records.length ? c.records : [{ id:'', date:'', work:'', note:'', nextDate:'', periodMonths:'', amount:'' }];
-    for (const r of recs) {
+    let recs = [];
+    try {
+      recs = c.records ? JSON.parse(c.records) : [];
+    } catch (err) {
+      console.error('Geçersiz kayıt verisi:', err, c.records);
+      recs = [];
+    }
+    const displayRecs = recs.length ? recs : [{ id:'', date:'', work:'', note:'', nextDate:'', periodMonths:'', amount:'' }];
+    for (const r of displayRecs) {
       rows.push({
         customerId: c.id || '',
         name: c.name || '',
@@ -117,7 +122,7 @@ async function exportToExcel() {
   }
 
   const backupsDir = path.join(__dirname, 'backups');
-  await fs.mkdir(backupsDir, { recursive: true });
+  await fsp.mkdir(backupsDir, { recursive: true });
 
   const workbook = new ExcelJS.Workbook();
   const sheet = workbook.addWorksheet('Customers');
@@ -168,17 +173,12 @@ const server = http.createServer(async (req, res) => {
 
     // GET /api/customers  -> tüm müşterileri getir
     if (url === '/api/customers' && req.method === 'GET') {
-      const { data: customers, error } = await supabase
-        .from('customers')
-        .select('id,name,address,phone,province,district,phone2,note,records');
-
-      if (error) {
-        console.error('GET /api/customers hata:', error);
-        sendJSON(res, 500, { error: 'Veri tabanı hatası' });
-        return;
-      }
-
-      sendJSON(res, 200, customers || []);
+      const customers = db.prepare('SELECT id,name,address,phone,province,district,phone2,note,records FROM customers').all();
+      const normalized = customers.map(c => ({
+        ...c,
+        records: c.records ? JSON.parse(c.records) : []
+      }));
+      sendJSON(res, 200, normalized);
       return;
     }
 
@@ -191,17 +191,23 @@ const server = http.createServer(async (req, res) => {
         return;
       }
 
-      const { data, error } = await supabase
-        .from('customers')
-        .insert([{ ...customer, records: customer.records || [] }]);
+      const stmt = db.prepare(`
+        INSERT OR REPLACE INTO customers (id,name,address,phone,province,district,phone2,note,records)
+        VALUES (@id,@name,@address,@phone,@province,@district,@phone2,@note,@records)
+      `);
+      stmt.run({
+        id: customer.id,
+        name: customer.name,
+        address: customer.address || '',
+        phone: customer.phone || '',
+        province: customer.province || '',
+        district: customer.district || '',
+        phone2: customer.phone2 || '',
+        note: customer.note || '',
+        records: JSON.stringify(customer.records || [])
+      });
 
-      if (error) {
-        console.error('POST /api/customers hata:', error);
-        sendJSON(res, 500, { error: 'Veri tabanı hatası' });
-        return;
-      }
-
-      sendJSON(res, 200, data[0] || customer);
+      sendJSON(res, 200, customer);
       return;
     }
 
@@ -219,32 +225,32 @@ const server = http.createServer(async (req, res) => {
       if (phone2 !== undefined && phone2 !== '') update.phone2 = phone2;
       if (note !== undefined) update.note = note;
 
-      const { data: existing, error: fetchError } = await supabase
-        .from('customers')
-        .select('records')
-        .eq('id', custId)
-        .single();
-
-      if (fetchError || !existing) {
+      const existing = db.prepare('SELECT records FROM customers WHERE id = ?').get(custId);
+      if (!existing) {
         sendJSON(res, 404, { error: 'Müşteri bulunamadı' });
         return;
       }
 
-      const updatedRecords = Array.isArray(existing.records) ? [...existing.records, record] : [record];
-      const { data, error } = await supabase
-        .from('customers')
-        .update({ ...update, records: updatedRecords })
-        .eq('id', custId)
-        .select('id,name,address,phone,province,district,phone2,note,records')
-        .single();
+      const existingRecords = existing.records ? JSON.parse(existing.records) : [];
+      const updatedRecords = [...existingRecords, record];
+      const stmt = db.prepare(`
+        UPDATE customers SET name = COALESCE(@name, name), address = COALESCE(@address, address), phone = COALESCE(@phone, phone), province = COALESCE(@province, province), district = COALESCE(@district, district), phone2 = COALESCE(@phone2, phone2), note = COALESCE(@note, note), records = @records WHERE id = @id
+      `);
+      stmt.run({
+        id: custId,
+        name: update.name,
+        address: update.address,
+        phone: update.phone,
+        province: update.province,
+        district: update.district,
+        phone2: update.phone2,
+        note: update.note,
+        records: JSON.stringify(updatedRecords)
+      });
 
-      if (error || !data) {
-        console.error('POST /api/customers/:id/records hata:', error);
-        sendJSON(res, 500, { error: 'Veri tabanı hatası' });
-        return;
-      }
-
-      sendJSON(res, 200, data);
+      const updated = db.prepare('SELECT id,name,address,phone,province,district,phone2,note,records FROM customers WHERE id = ?').get(custId);
+      updated.records = updated.records ? JSON.parse(updated.records) : [];
+      sendJSON(res, 200, updated);
       return;
     }
 
@@ -252,30 +258,16 @@ const server = http.createServer(async (req, res) => {
     if (parts.length === 5 && parts[0] === 'api' && parts[1] === 'customers' && parts[3] === 'records' && req.method === 'DELETE') {
       const custId = parts[2];
       const recId = parts[4];
-      const { data: existing, error: fetchError } = await supabase
-        .from('customers')
-        .select('records')
-        .eq('id', custId)
-        .single();
+      const existing = db.prepare('SELECT records FROM customers WHERE id = ?').get(custId);
 
-      if (fetchError || !existing) {
+      if (!existing) {
         sendJSON(res, 404, { error: 'Müşteri bulunamadı' });
         return;
       }
 
-      const filtered = Array.isArray(existing.records)
-        ? existing.records.filter(r => r.id !== recId)
-        : [];
-      const { error } = await supabase
-        .from('customers')
-        .update({ records: filtered })
-        .eq('id', custId);
-
-      if (error) {
-        console.error('DELETE /api/customers/:id/records/:recId hata:', error);
-        sendJSON(res, 500, { error: 'Veri tabanı hatası' });
-        return;
-      }
+      const records = existing.records ? JSON.parse(existing.records) : [];
+      const filtered = records.filter(r => r.id !== recId);
+      db.prepare('UPDATE customers SET records = ? WHERE id = ?').run(JSON.stringify(filtered), custId);
 
       sendJSON(res, 200, { ok: true });
       return;
@@ -285,43 +277,49 @@ const server = http.createServer(async (req, res) => {
     if (parts.length === 3 && parts[0] === 'api' && parts[1] === 'customers' && req.method === 'PUT') {
       const custId = parts[2];
       const body = await readBody(req);
-      const { name, address, district, phone, phone2, note } = JSON.parse(body);
+      const { name, address, province, district, phone, phone2, note } = JSON.parse(body);
       const update = { name, address, phone };
+      if (province !== undefined && province !== '') update.province = province;
       if (district !== undefined && district !== '') update.district = district;
       if (phone2 !== undefined) update.phone2 = phone2;
       if (note !== undefined) update.note = note;
 
-      const { data, error } = await supabase
-        .from('customers')
-        .update(update)
-        .eq('id', custId)
-        .select('id,name,address,phone,province,district,phone2,note,records')
-        .single();
+      const stmt = db.prepare(`
+        UPDATE customers
+        SET name = COALESCE(@name, name),
+            address = COALESCE(@address, address),
+            phone = COALESCE(@phone, phone),
+            province = COALESCE(@province, province),
+            district = COALESCE(@district, district),
+            phone2 = COALESCE(@phone2, phone2),
+            note = COALESCE(@note, note)
+        WHERE id = @id
+      `);
+      stmt.run({
+        id: custId,
+        name: update.name,
+        address: update.address,
+        phone: update.phone,
+        province: update.province,
+        district: update.district,
+        phone2: update.phone2,
+        note: update.note
+      });
 
-      if (error || !data) {
-        console.error('PUT /api/customers/:id hata:', error);
+      const updated = db.prepare('SELECT id,name,address,phone,province,district,phone2,note,records FROM customers WHERE id = ?').get(custId);
+      if (!updated) {
         sendJSON(res, 404, { error: 'Müşteri bulunamadı' });
         return;
       }
-
-      sendJSON(res, 200, data);
+      updated.records = updated.records ? JSON.parse(updated.records) : [];
+      sendJSON(res, 200, updated);
       return;
     }
 
     // DELETE /api/customers/:id -> müşteriyi sil
     if (parts.length === 3 && parts[0] === 'api' && parts[1] === 'customers' && req.method === 'DELETE') {
       const custId = parts[2];
-      const { error } = await supabase
-        .from('customers')
-        .delete()
-        .eq('id', custId);
-
-      if (error) {
-        console.error('DELETE /api/customers/:id hata:', error);
-        sendJSON(res, 500, { error: 'Veri tabanı hatası' });
-        return;
-      }
-
+      db.prepare('DELETE FROM customers WHERE id = ?').run(custId);
       sendJSON(res, 200, { ok: true });
       return;
     }
@@ -361,8 +359,8 @@ const server = http.createServer(async (req, res) => {
       if (!file || !file.startsWith('backup_') || file.includes('..')) { sendJSON(res, 400, { error: 'Geçersiz dosya' }); return; }
       const fullPath = path.join(__dirname, 'backups', file);
       try{
-        const stat = await fs.stat(fullPath);
-        const data = await fs.readFile(fullPath);
+        const stat = await fsp.stat(fullPath);
+        const data = await fsp.readFile(fullPath);
         res.writeHead(200, {
           'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
           'Content-Disposition': `attachment; filename="${file}"`,
@@ -398,6 +396,6 @@ connectDB().then(() => {
     console.log(`Türk Teknik Su Arıtma - Müşteri Takip sunucusu http://localhost:${PORT} adresinde çalışıyor`);
   });
 }).catch(err => {
-  console.error('Supabase bağlantı hatası:', err);
+  console.error('SQLite başlatma hatası:', err);
   process.exit(1);
 });

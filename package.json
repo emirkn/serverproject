@@ -1,7 +1,7 @@
 {
-  "name": "turk-teknik-su-aritma-musteri-takip",
+  "name": "e-su-aritma-musteri-takip",
   "version": "1.0.0",
-  "description": "Türk Teknik Su Arıtma - Müşteri Takip uygulaması (Node.js + SQLite)",
+  "description": "E-Su Arıtma - Müşteri Takip uygulaması (Node.js + SQLite)",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
